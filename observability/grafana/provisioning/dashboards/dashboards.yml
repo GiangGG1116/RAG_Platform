@@ -1,0 +1,13 @@
+# Grafana dashboards provisioning
+apiVersion: 1
+
+providers:
+  - name: "RAG Platform"
+    orgId: 1
+    folder: "RAG Platform"
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

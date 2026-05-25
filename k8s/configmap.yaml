@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rag-platform-config
+  namespace: rag-platform
+data:
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "rag_platform"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  LLM_PROVIDER: "openai"
+  OPENAI_MODEL: "gpt-4o-mini"
+  OPENAI_EMBEDDING_MODEL: "text-embedding-3-small"
+  EMBEDDING_DIMENSION: "1536"
+  INGESTION_SERVICE_URL: "http://ingestion:8001"
+  RETRIEVAL_SERVICE_URL: "http://retrieval:8002"
+  LLM_SERVICE_URL: "http://llm-service:8003"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_WINDOW_SECONDS: "60"
+  CHUNK_SIZE: "512"
+  CHUNK_OVERLAP: "50"

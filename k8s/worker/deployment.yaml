@@ -35,6 +35,19 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+          livenessProbe:
+            exec:
+              command: ["python", "-c", "import os, time; assert time.time() - os.path.getmtime('/tmp/worker_heartbeat') < 60"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            exec:
+              command: ["python", "-c", "print('ok')"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 6
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

@@ -1,102 +1,91 @@
-"""Tests for Ingestion service."""
+"""Integration tests for Ingestion service — validation, chunking, and dedup."""
 
 from __future__ import annotations
 
 import pytest
+from unittest.mock import AsyncMock, patch, MagicMock
+
+from shared.config import get_settings
 
 
-class TestIngestionGraphNodes:
-    """Test ingestion pipeline node logic."""
+class TestIngestionValidation:
+    """Test document validation logic."""
 
-    def test_split_into_sentences(self):
-        """Test sentence splitting utility."""
-        from services.ingestion.app.graphs.nodes import _split_into_sentences
+    @pytest.mark.asyncio
+    async def test_validate_empty_content_fails(self):
+        from services.ingestion.app.graphs.nodes import validate_document_node
 
-        text = "Hello world. How are you? I am fine!"
-        sentences = _split_into_sentences(text)
-        assert len(sentences) == 3
-        assert sentences[0] == "Hello world."
+        state = {"content": "", "document_id": "test-id"}
+        with patch("services.ingestion.app.graphs.nodes.get_cache", new_callable=AsyncMock) as mock_cache:
+            result = await validate_document_node(state)
+            assert result["is_valid"] is False
+            assert "empty" in result["error"]
 
-    def test_split_empty_text(self):
-        from services.ingestion.app.graphs.nodes import _split_into_sentences
+    @pytest.mark.asyncio
+    async def test_validate_oversized_content_fails(self):
+        from services.ingestion.app.graphs.nodes import validate_document_node, MAX_CONTENT_LENGTH
 
-        sentences = _split_into_sentences("")
-        assert len(sentences) == 0
-
-    def test_split_single_sentence(self):
-        from services.ingestion.app.graphs.nodes import _split_into_sentences
-
-        sentences = _split_into_sentences("Just one sentence.")
-        assert len(sentences) == 1
-
-
-class TestSharedUtils:
-    """Test shared utility functions."""
-
-    def test_hash_content(self):
-        from shared.utils import hash_content
-
-        h1 = hash_content("hello")
-        h2 = hash_content("hello")
-        h3 = hash_content("world")
-        assert h1 == h2
-        assert h1 != h3
-
-    def test_truncate_text(self):
-        from shared.utils import truncate_text
-
-        assert truncate_text("short", 10) == "short"
-        assert truncate_text("a" * 300, 200).endswith("...")
-        assert len(truncate_text("a" * 300, 200)) == 203
-
-    def test_build_cache_key(self):
-        from shared.utils import build_cache_key
-
-        key = build_cache_key("rag", "retrieve", "tenant1")
-        assert key == "rag:retrieve:tenant1"
-
-    def test_chunk_list(self):
-        from shared.utils import chunk_list
-
-        result = chunk_list([1, 2, 3, 4, 5], 2)
-        assert result == [[1, 2], [3, 4], [5]]
-
-    def test_generate_id(self):
-        from shared.utils import generate_id
-
-        id1 = generate_id()
-        id2 = generate_id()
-        assert id1 != id2
-        assert len(id1) == 36  # UUID format
+        state = {"content": "x" * (MAX_CONTENT_LENGTH + 1), "document_id": "test-id"}
+        with patch("services.ingestion.app.graphs.nodes.get_cache", new_callable=AsyncMock) as mock_cache:
+            mock_cache_inst = AsyncMock()
+            mock_cache_inst.get = AsyncMock(return_value=None)
+            mock_cache_inst.set = AsyncMock(return_value=True)
+            mock_cache.return_value = mock_cache_inst
+            result = await validate_document_node(state)
+            assert result["is_valid"] is False
+            assert "max length" in result["error"]
 
 
-class TestConfig:
-    """Test configuration module."""
+class TestTextChunking:
+    """Test text chunking logic."""
 
-    def test_settings_defaults(self):
-        from shared.config import Settings
+    @pytest.mark.asyncio
+    async def test_chunk_empty_text_returns_empty(self):
+        from services.ingestion.app.graphs.nodes import chunk_text_node
 
-        settings = Settings()
-        assert settings.postgres_host == "postgres"
-        assert settings.redis_port == 6379
-        assert settings.chunk_size == 512
+        state = {"extracted_text": "", "document_id": "test-id", "title": "Test"}
+        result = await chunk_text_node(state)
+        assert result["chunks"] == []
+        assert result["chunk_count"] == 0
 
-    def test_database_url_property(self):
-        from shared.config import Settings
+    @pytest.mark.asyncio
+    async def test_chunk_short_text_single_chunk(self):
+        from services.ingestion.app.graphs.nodes import chunk_text_node
 
-        settings = Settings()
-        url = settings.database_url
-        assert "postgresql+asyncpg://" in url
-        assert "rag_platform" in url
+        state = {
+            "extracted_text": "This is a short text.",
+            "document_id": "test-id",
+            "title": "Test",
+        }
+        result = await chunk_text_node(state)
+        assert result["chunk_count"] == 1
+        assert result["chunks"][0]["content"] == "This is a short text."
 
-    def test_api_keys_list(self):
-        from shared.config import Settings
+    @pytest.mark.asyncio
+    async def test_chunk_long_text_multiple_chunks(self):
+        from services.ingestion.app.graphs.nodes import chunk_text_node
 
-        settings = Settings(api_keys="key1,key2,key3")
-        assert settings.api_keys_list == ["key1", "key2", "key3"]
+        # Generate text larger than default chunk_size (512)
+        sentences = [f"Sentence number {i} with some content. " for i in range(100)]
+        state = {
+            "extracted_text": " ".join(sentences),
+            "document_id": "test-id",
+            "title": "Test",
+        }
+        result = await chunk_text_node(state)
+        assert result["chunk_count"] > 1
+        for chunk in result["chunks"]:
+            assert chunk["content"]
+            assert chunk["chunk_index"] >= 0
+            assert chunk["token_count"] > 0
 
-    def test_redis_url_property(self):
-        from shared.config import Settings
 
-        settings = Settings(redis_host="localhost", redis_port=6379, redis_db=0)
-        assert settings.redis_url == "redis://localhost:6379/0"
+class TestIngestionSchemas:
+    """Test ingestion-related schemas."""
+
+    def test_supported_doc_types(self):
+        from services.ingestion.app.graphs.nodes import SUPPORTED_TYPES
+
+        assert "text" in SUPPORTED_TYPES
+        assert "pdf" in SUPPORTED_TYPES
+        assert "md" in SUPPORTED_TYPES

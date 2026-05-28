@@ -105,11 +105,12 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
                     "metadata": row["metadata"] or {},
                 })
         else:
-            # Fallback: keyword search with ILIKE
+            # Fallback: keyword search with ILIKE (parameterized to prevent SQL injection)
             keywords = state.get("query_analysis", {}).get("keywords", [])
             if keywords:
+                safe_keywords = keywords[:5]
                 keyword_conditions = " OR ".join(
-                    [f"c.content ILIKE '%{kw}%'" for kw in keywords[:5]]
+                    [f"c.content ILIKE :kw_{i}" for i in range(len(safe_keywords))]
                 )
                 keyword_query = text(f"""
                     SELECT c.id, c.document_id, c.content, c.chunk_index, c.metadata,
@@ -121,10 +122,10 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
                       AND ({keyword_conditions})
                     LIMIT :top_k
                 """)
-                result = await session.execute(
-                    keyword_query,
-                    {"tenant_id": tenant_id, "top_k": top_k},
-                )
+                params = {"tenant_id": tenant_id, "top_k": top_k}
+                for i, kw in enumerate(safe_keywords):
+                    params[f"kw_{i}"] = f"%{kw}%"
+                result = await session.execute(keyword_query, params)
                 for row in result.mappings():
                     retrieved_chunks.append({
                         "chunk_id": str(row["id"]),

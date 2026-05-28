@@ -15,7 +15,6 @@ import structlog
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -57,6 +56,27 @@ def setup_metrics(service_name: str) -> MeterProvider:
     return provider
 
 
+# ── PII Masking ──────────────────────────────────────────
+import re
+
+_PII_PATTERNS = [
+    (re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"), "[EMAIL_REDACTED]"),
+    (re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b"), "[PHONE_REDACTED]"),
+    (re.compile(r"sk-[a-zA-Z0-9]{20,}"), "[API_KEY_REDACTED]"),
+    (re.compile(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"), "[IP_REDACTED]"),
+]
+
+
+def _mask_pii_processor(logger: Any, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Mask PII (emails, phones, API keys, IPs) in log events."""
+    event = event_dict.get("event", "")
+    if isinstance(event, str):
+        for pattern, replacement in _PII_PATTERNS:
+            event = pattern.sub(replacement, event)
+        event_dict["event"] = event
+    return event_dict
+
+
 def setup_logging(service_name: str) -> None:
     """Configure structured logging with structlog."""
     settings = get_settings()
@@ -67,6 +87,7 @@ def setup_logging(service_name: str) -> None:
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         structlog.stdlib.PositionalArgumentsFormatter(),
+        _mask_pii_processor,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.UnicodeDecoder(),
@@ -123,6 +144,14 @@ def setup_observability(service_name: str) -> None:
 
 def instrument_fastapi(app: Any) -> None:
     """Instrument a FastAPI app for automatic tracing."""
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    except ImportError as exc:
+        raise ImportError(
+            "opentelemetry-instrumentation-fastapi is required for FastAPI instrumentation. "
+            "Install it in services that use `instrument_fastapi`."
+        ) from exc
+
     FastAPIInstrumentor.instrument_app(app)  # type: ignore[arg-type]
 
 

@@ -41,6 +41,18 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+          livenessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "ping"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 10
   volumeClaimTemplates:
     - metadata:
         name: rabbitmq-storage

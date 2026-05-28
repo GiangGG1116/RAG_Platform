@@ -4,9 +4,6 @@ API Gateway - Main FastAPI Application.
 Central entry point that proxies requests to internal microservices,
 handles authentication, rate limiting, CORS, and observability.
 """
-
-from __future__ import annotations
-
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -20,7 +17,7 @@ from shared.config import get_settings
 from shared.observability import instrument_fastapi, setup_observability
 
 from app.middleware.rate_limit import RateLimitMiddleware
-from app.routers import documents, health, query
+from app.routers import admin, documents, health, query
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +66,10 @@ def create_app() -> FastAPI:
     # ── Middleware ────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Content-Type", "Authorization", "X-API-Key"],
     )
     app.add_middleware(RateLimitMiddleware)
 
@@ -80,6 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, tags=["Health"])
     app.include_router(documents.router, prefix="/api/v1", tags=["Documents"])
     app.include_router(query.router, prefix="/api/v1", tags=["Query"])
+    app.include_router(admin.router, prefix="/api/v1", tags=["Admin"])
 
     # ── OTel Instrumentation ─────────────────────────────
     instrument_fastapi(app)

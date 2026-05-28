@@ -71,6 +71,18 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 5
+            periodSeconds: 10
       volumes:
         - name: config
           configMap:

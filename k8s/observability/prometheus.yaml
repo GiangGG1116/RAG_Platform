@@ -13,13 +13,14 @@ data:
           - targets: ["otel-collector:8889"]
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: prometheus
   namespace: rag-platform
   labels:
     app: prometheus
 spec:
+  serviceName: prometheus
   replicas: 1
   selector:
     matchLabels:
@@ -37,10 +38,13 @@ spec:
           args:
             - --config.file=/etc/prometheus/prometheus.yml
             - --storage.tsdb.retention.time=7d
+            - --storage.tsdb.path=/prometheus
           volumeMounts:
             - name: config
               mountPath: /etc/prometheus/prometheus.yml
               subPath: prometheus.yml
+            - name: prometheus-storage
+              mountPath: /prometheus
           resources:
             requests:
               memory: "256Mi"
@@ -48,10 +52,30 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 10
       volumes:
         - name: config
           configMap:
             name: prometheus-config
+  volumeClaimTemplates:
+    - metadata:
+        name: prometheus-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
 ---
 apiVersion: v1
 kind: Service

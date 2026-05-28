@@ -24,7 +24,13 @@ spec:
             - name: GF_SECURITY_ADMIN_USER
               value: "admin"
             - name: GF_SECURITY_ADMIN_PASSWORD
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: rag-platform-secrets
+                  key: GRAFANA_ADMIN_PASSWORD
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
           resources:
             requests:
               memory: "128Mi"
@@ -32,6 +38,33 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: grafana-storage
+          persistentVolumeClaim:
+            claimName: grafana-storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-storage
+  namespace: rag-platform
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
 ---
 apiVersion: v1
 kind: Service
@@ -39,7 +72,7 @@ metadata:
   name: grafana
   namespace: rag-platform
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: grafana
   ports:

@@ -25,3 +25,6 @@ data:
   RATE_LIMIT_WINDOW_SECONDS: "60"
   CHUNK_SIZE: "512"
   CHUNK_OVERLAP: "50"
+  CORS_ORIGINS: "https://rag.company.com,https://admin.company.com"
+  JWT_ALGORITHM: "HS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "60"

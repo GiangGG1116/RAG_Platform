@@ -1,0 +1,63 @@
+# ============================================================
+# PodDisruptionBudgets - Ensure availability during node drain
+# ============================================================
+
+{{- if .Values.apiGateway.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "api-gateway" "context" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.apiGateway.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "rag-platform.selectorLabels" (dict "component" "api-gateway") | nindent 6 }}
+{{- end }}
+---
+{{- if .Values.retrieval.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: retrieval-pdb
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "retrieval" "context" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.retrieval.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "rag-platform.selectorLabels" (dict "component" "retrieval") | nindent 6 }}
+{{- end }}
+---
+{{- if .Values.ingestion.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ingestion-pdb
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "ingestion" "context" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.ingestion.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "rag-platform.selectorLabels" (dict "component" "ingestion") | nindent 6 }}
+{{- end }}
+---
+{{- if .Values.worker.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: worker-pdb
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "worker" "context" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.worker.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "rag-platform.selectorLabels" (dict "component" "worker") | nindent 6 }}
+{{- end }}

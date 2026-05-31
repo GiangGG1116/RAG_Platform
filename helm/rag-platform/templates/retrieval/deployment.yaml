@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retrieval
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "retrieval" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.retrieval.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rag-platform.selectorLabels" (dict "component" "retrieval") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rag-platform.selectorLabels" (dict "component" "retrieval") | nindent 8 }}
+    spec:
+      containers:
+        - name: retrieval
+          image: {{ include "rag-platform.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.retrieval.image.repository "tag" .Values.retrieval.image.tag) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.retrieval.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "rag-platform.configMapName" . }}
+            - secretRef:
+                name: {{ include "rag-platform.secretName" . }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.retrieval.otelServiceName | quote }}
+          resources:
+            {{- toYaml .Values.retrieval.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.retrieval.livenessProbe.path }}
+              port: {{ .Values.retrieval.port }}
+            initialDelaySeconds: {{ .Values.retrieval.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.retrieval.livenessProbe.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.retrieval.readinessProbe.path }}
+              port: {{ .Values.retrieval.port }}
+            initialDelaySeconds: {{ .Values.retrieval.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.retrieval.readinessProbe.periodSeconds }}

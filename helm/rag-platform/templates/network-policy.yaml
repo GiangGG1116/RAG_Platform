@@ -1,0 +1,67 @@
+{{- if .Values.networkPolicy.enabled }}
+# ============================================================
+# NetworkPolicy - Restrict traffic between services
+# ============================================================
+
+# --- Deny all ingress by default ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-ingress
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress: []
+---
+# Allow API Gateway to receive traffic from anywhere (external)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-gateway-ingress
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: {{ .Values.apiGateway.port }}
+---
+# Allow internal services to receive traffic from within the namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-traffic
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 5432   # postgres
+        - port: 6379   # redis
+        - port: 5672   # rabbitmq
+        - port: 15672  # rabbitmq management
+        - port: {{ .Values.ingestion.port }}    # ingestion
+        - port: {{ .Values.retrieval.port }}    # retrieval
+        - port: {{ .Values.llmService.port }}   # llm-service
+        - port: 4317   # otel grpc
+        - port: 4318   # otel http
+        - port: 8889   # otel prometheus
+        - port: 9090   # prometheus
+        - port: 3000   # grafana
+{{- end }}

@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "worker" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rag-platform.selectorLabels" (dict "component" "worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rag-platform.selectorLabels" (dict "component" "worker") | nindent 8 }}
+    spec:
+      containers:
+        - name: worker
+          image: {{ include "rag-platform.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.worker.image.repository "tag" .Values.worker.image.tag) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "rag-platform.configMapName" . }}
+            - secretRef:
+                name: {{ include "rag-platform.secretName" . }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.worker.otelServiceName | quote }}
+            - name: LLM_SERVICE_URL
+              value: "http://llm-service:{{ .Values.llmService.port }}"
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command: ["python", "-c", "import os, time; assert time.time() - os.path.getmtime('/tmp/worker_heartbeat') < 60"]
+            initialDelaySeconds: {{ .Values.worker.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.worker.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.worker.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.worker.livenessProbe.failureThreshold }}
+          startupProbe:
+            exec:
+              command: ["python", "-c", "print('ok')"]
+            initialDelaySeconds: {{ .Values.worker.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.worker.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.worker.startupProbe.failureThreshold }}

@@ -213,6 +213,17 @@ services:
     networks:
       - rag-network
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - rag-network
+
 volumes:
   postgres_data:
   redis_data:

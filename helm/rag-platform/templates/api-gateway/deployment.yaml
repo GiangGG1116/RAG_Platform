@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "api-gateway" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.apiGateway.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rag-platform.selectorLabels" (dict "component" "api-gateway") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rag-platform.selectorLabels" (dict "component" "api-gateway") | nindent 8 }}
+    spec:
+      containers:
+        - name: api-gateway
+          image: {{ include "rag-platform.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.apiGateway.image.repository "tag" .Values.apiGateway.image.tag) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.apiGateway.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "rag-platform.configMapName" . }}
+            - secretRef:
+                name: {{ include "rag-platform.secretName" . }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "api-gateway"
+          resources:
+            {{- toYaml .Values.apiGateway.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.apiGateway.livenessProbe.path }}
+              port: {{ .Values.apiGateway.port }}
+            initialDelaySeconds: {{ .Values.apiGateway.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.apiGateway.livenessProbe.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.apiGateway.readinessProbe.path }}
+              port: {{ .Values.apiGateway.port }}
+            initialDelaySeconds: {{ .Values.apiGateway.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.apiGateway.readinessProbe.periodSeconds }}

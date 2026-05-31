@@ -1,0 +1,23 @@
+{{- if .Values.llmService.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: llm-service-hpa
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "llm-service" "context" .) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: llm-service
+  minReplicas: {{ .Values.llmService.hpa.minReplicas }}
+  maxReplicas: {{ .Values.llmService.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.llmService.hpa.targetCPUUtilization }}
+{{- end }}

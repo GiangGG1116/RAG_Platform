@@ -1,0 +1,30 @@
+🚀 RAG Platform has been deployed!
+
+Namespace: {{ include "rag-platform.namespace" . }}
+
+=== Application Services ===
+  API Gateway:  http://api-gateway.{{ include "rag-platform.namespace" . }}.svc:{{ .Values.apiGateway.service.port }}
+  Ingestion:    http://ingestion.{{ include "rag-platform.namespace" . }}.svc:{{ .Values.ingestion.service.port }}
+  Retrieval:    http://retrieval.{{ include "rag-platform.namespace" . }}.svc:{{ .Values.retrieval.service.port }}
+  LLM Service:  http://llm-service.{{ include "rag-platform.namespace" . }}.svc:{{ .Values.llmService.service.port }}
+
+=== Infrastructure ===
+  PostgreSQL:   postgres.{{ include "rag-platform.namespace" . }}.svc:5432
+  RabbitMQ:     rabbitmq.{{ include "rag-platform.namespace" . }}.svc:5672
+  Redis:        redis.{{ include "rag-platform.namespace" . }}.svc:6379
+
+{{- if .Values.observability.enabled }}
+=== Observability ===
+  Grafana:      http://grafana.{{ include "rag-platform.namespace" . }}.svc:3000
+  Prometheus:   http://prometheus.{{ include "rag-platform.namespace" . }}.svc:9090
+  OTEL:         otel-collector.{{ include "rag-platform.namespace" . }}.svc:4317 (gRPC)
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+=== Ingress ===
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- end }}
+
+⚠️  Remember to update secrets in values.yaml before going to production!

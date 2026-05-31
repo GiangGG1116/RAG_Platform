@@ -2,13 +2,24 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
-from typing import Any
+from typing import Any, AsyncIterator
 
 from app.providers.base import BaseLLMProvider
 
 logger = logging.getLogger(__name__)
+
+_MOCK_ANSWER = (
+    "Based on the provided context, here is the answer: "
+    "The system processes documents through an ingestion pipeline, "
+    "chunks them into smaller pieces, generates embeddings, "
+    "and stores them for retrieval. When a query is made, "
+    "it performs hybrid search combining vector similarity and "
+    "keyword matching, then generates a response using the "
+    "most relevant chunks. [Source 1] [Source 2]"
+)
 
 
 class LocalProvider(BaseLLMProvider):
@@ -25,21 +36,29 @@ class LocalProvider(BaseLLMProvider):
         temperature: float = 0.1,
     ) -> dict[str, Any]:
         """Return a mock response based on the prompt."""
-        # Extract context and question from prompt
-        answer = (
-            "Based on the provided context, here is the answer: "
-            "The system processes documents through an ingestion pipeline, "
-            "chunks them into smaller pieces, generates embeddings, "
-            "and stores them for retrieval. When a query is made, "
-            "it performs hybrid search combining vector similarity and "
-            "keyword matching, then generates a response using the "
-            "most relevant chunks. [Source 1] [Source 2]"
-        )
-
         return {
-            "text": answer,
+            "text": _MOCK_ANSWER,
             "model": "local-mock",
-            "usage": {"prompt_tokens": len(prompt.split()), "completion_tokens": len(answer.split())},
+            "usage": {"prompt_tokens": len(prompt.split()), "completion_tokens": len(_MOCK_ANSWER.split())},
+        }
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        max_tokens: int = 1024,
+        temperature: float = 0.1,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Simulate token-by-token streaming with small delays."""
+        words = _MOCK_ANSWER.split()
+        for i, word in enumerate(words):
+            token = word if i == 0 else f" {word}"
+            yield {"token": token}
+            await asyncio.sleep(0.03)  # ~30ms per token to simulate LLM
+
+        yield {
+            "done": True,
+            "model": "local-mock",
+            "usage": {"prompt_tokens": len(prompt.split()), "completion_tokens": len(words)},
         }
 
     async def embed(self, text: str) -> dict[str, Any]:

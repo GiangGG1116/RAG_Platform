@@ -116,6 +116,10 @@ class Settings(BaseSettings):
     chunk_size: int = 512
     chunk_overlap: int = 50
 
+    # ── Memory (Conversation History) ────────────────────
+    memory_max_turns: int = 10
+    memory_ttl_seconds: int = 3600
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:

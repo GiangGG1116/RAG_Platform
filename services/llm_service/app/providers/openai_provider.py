@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
-from typing import Any
+from typing import Any, AsyncIterator
 
 import httpx
 
@@ -75,6 +76,57 @@ class OpenAIProvider(BaseLLMProvider):
                 raise
 
         return {"text": "Generation failed after retries.", "model": "error", "usage": {}}
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        max_tokens: int = 1024,
+        temperature: float = 0.1,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Stream text using OpenAI Chat Completions API with stream=true."""
+        model_name = self._settings.openai_model
+        try:
+            async with self._client.stream(
+                "POST",
+                "/chat/completions",
+                json={
+                    "model": model_name,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are a helpful assistant that answers questions "
+                                "based on provided context. Always cite sources when available."
+                            ),
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "stream": True,
+                },
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line or not line.startswith("data: "):
+                        continue
+                    payload = line[len("data: "):]
+                    if payload.strip() == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(payload)
+                        delta = chunk["choices"][0].get("delta", {})
+                        token = delta.get("content")
+                        if token:
+                            yield {"token": token}
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        continue
+
+            yield {"done": True, "model": model_name, "usage": {}}
+
+        except Exception as e:
+            logger.exception("Streaming generation failed")
+            yield {"error": str(e), "done": True, "model": "error", "usage": {}}
 
     async def embed(self, text: str) -> dict[str, Any]:
         """Generate embeddings using OpenAI Embeddings API."""

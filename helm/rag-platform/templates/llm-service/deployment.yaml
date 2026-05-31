@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-service
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "llm-service" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.llmService.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rag-platform.selectorLabels" (dict "component" "llm-service") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rag-platform.selectorLabels" (dict "component" "llm-service") | nindent 8 }}
+    spec:
+      containers:
+        - name: llm-service
+          image: {{ include "rag-platform.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.llmService.image.repository "tag" .Values.llmService.image.tag) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.llmService.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "rag-platform.configMapName" . }}
+            - secretRef:
+                name: {{ include "rag-platform.secretName" . }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.llmService.otelServiceName | quote }}
+          resources:
+            {{- toYaml .Values.llmService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.llmService.livenessProbe.path }}
+              port: {{ .Values.llmService.port }}
+            initialDelaySeconds: {{ .Values.llmService.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.llmService.livenessProbe.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.llmService.readinessProbe.path }}
+              port: {{ .Values.llmService.port }}
+            initialDelaySeconds: {{ .Values.llmService.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.llmService.readinessProbe.periodSeconds }}

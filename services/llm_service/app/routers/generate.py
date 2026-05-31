@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import logging
-from typing import Any
+from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -64,6 +66,42 @@ async def generate_text(payload: GenerateRequest, request: Request) -> Any:
             model="error",
             usage={},
         )
+
+
+async def _stream_generate(
+    provider: Any, prompt: str, max_tokens: int, temperature: float
+) -> AsyncIterator[str]:
+    """SSE generator that yields token events from the LLM provider."""
+    try:
+        async for chunk in provider.generate_stream(
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        ):
+            yield f"data: {json.dumps(chunk)}\n\n"
+    except Exception as e:
+        logger.exception("Streaming generation failed")
+        yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
+
+
+@router.post("/generate/stream", summary="Stream text generation (SSE)")
+async def generate_text_stream(payload: GenerateRequest, request: Request) -> StreamingResponse:
+    """Stream text generation token-by-token using Server-Sent Events.
+
+    Each SSE event contains a JSON payload:
+      - ``{"token": "..."}`` for each generated token
+      - ``{"done": true, "model": "...", "usage": {...}}`` as the final event
+    """
+    provider = request.app.state.llm_provider
+    return StreamingResponse(
+        _stream_generate(provider, payload.prompt, payload.max_tokens, payload.temperature),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
+    )
 
 
 @router.post("/embeddings", response_model=EmbeddingResponse, summary="Generate embeddings")

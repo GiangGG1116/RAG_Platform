@@ -1,0 +1,16 @@
+{{- if .Values.observability.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "prometheus" "context" .) | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "rag-platform.selectorLabels" (dict "component" "prometheus") | nindent 4 }}
+  ports:
+    - port: 9090
+      targetPort: 9090
+{{- end }}

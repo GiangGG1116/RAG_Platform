@@ -1,0 +1,23 @@
+{{- if .Values.retrieval.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: retrieval-hpa
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "retrieval" "context" .) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: retrieval
+  minReplicas: {{ .Values.retrieval.hpa.minReplicas }}
+  maxReplicas: {{ .Values.retrieval.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.retrieval.hpa.targetCPUUtilization }}
+{{- end }}

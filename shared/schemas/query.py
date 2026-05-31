@@ -16,6 +16,10 @@ class QueryRequest(BaseModel):
     top_k: int = Field(default=5, ge=1, le=50, description="Number of chunks to retrieve")
     rerank: bool = Field(default=True, description="Whether to apply reranking")
     stream: bool = Field(default=False, description="Whether to stream the response")
+    conversation_id: str | None = Field(
+        default=None,
+        description="Conversation ID for multi-turn memory. Omit for stateless queries.",
+    )
 
     model_config = {"json_schema_extra": {
         "example": {
@@ -23,6 +27,7 @@ class QueryRequest(BaseModel):
             "tenant_id": "default",
             "top_k": 5,
             "rerank": True,
+            "conversation_id": "conv-abc-123",
         }
     }}
 
@@ -58,4 +63,5 @@ class QueryResponse(BaseModel):
     retrieved_chunks: list[RetrievedChunk] = Field(default_factory=list)
     model: str = ""
     latency_ms: float = 0.0
+    conversation_id: str | None = None
     created_at: datetime = Field(default_factory=datetime.now)

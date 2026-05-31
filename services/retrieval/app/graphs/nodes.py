@@ -4,13 +4,10 @@ LangGraph node implementations for the RAG pipeline.
 Each node performs one step: query analysis, retrieval, reranking,
 generation, and citation extraction.
 """
-
-from __future__ import annotations
-
 import json
 import logging
 import uuid
-from typing import Any
+from typing import Any, AsyncIterator
 
 from sqlalchemy import select, text
 
@@ -83,12 +80,12 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
             vector_query = text("""
                 SELECT c.id, c.document_id, c.content, c.chunk_index, c.metadata,
                        d.title as document_title,
-                       1 - (c.embedding <=> :embedding::vector) as similarity_score
+                       1 - (c.embedding <=> CAST(:embedding AS vector)) as similarity_score
                 FROM chunks c
                 JOIN documents d ON d.id = c.document_id
                 WHERE d.tenant_id = :tenant_id
                   AND c.embedding IS NOT NULL
-                ORDER BY c.embedding <=> :embedding::vector
+                ORDER BY c.embedding <=> CAST(:embedding AS vector)
                 LIMIT :top_k
             """)
             result = await session.execute(
@@ -261,3 +258,74 @@ async def cite_node(state: dict[str, Any]) -> dict[str, Any]:
 
     logger.info("Extracted %d citations", len(citations))
     return {"citations": citations}
+
+
+# ── Streaming Node (used outside the compiled graph) ────────────
+
+
+def build_rag_prompt(question: str, chunks: list[dict]) -> str:
+    """Build the RAG prompt from question and context chunks."""
+    if not chunks:
+        return question
+
+    context_parts = []
+    for i, chunk in enumerate(chunks[:5]):
+        context_parts.append(
+            f"[Source {i + 1}: {chunk['document_title']}]\n{chunk['content']}"
+        )
+    context = "\n\n---\n\n".join(context_parts)
+
+    return f"""Based on the following context, answer the question accurately.
+Always cite your sources using [Source N] format.
+If the context doesn't contain enough information, say so.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer:"""
+
+
+async def generate_stream_node(
+    question: str,
+    chunks: list[dict],
+    http_client: Any,
+) -> AsyncIterator[dict[str, Any]]:
+    """Stream LLM generation token-by-token via the LLM service SSE endpoint.
+
+    Yields dicts:
+      - {"token": "partial text"}
+      - {"done": True, "model": ..., "usage": ...}
+    """
+    settings = get_settings()
+
+    if not chunks:
+        yield {"token": "I couldn't find relevant information to answer your question."}
+        yield {"done": True, "model": "none", "usage": {}}
+        return
+
+    prompt = build_rag_prompt(question, chunks)
+
+    try:
+        async with http_client.stream(
+            "POST",
+            f"{settings.llm_service_url}/api/v1/generate/stream",
+            json={"prompt": prompt, "max_tokens": 1024, "temperature": 0.1},
+            timeout=120.0,
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line or not line.startswith("data: "):
+                    continue
+                payload = line[len("data: "):]
+                try:
+                    chunk = json.loads(payload)
+                    yield chunk
+                except json.JSONDecodeError:
+                    continue
+
+    except Exception as e:
+        logger.exception("Streaming generation via LLM service failed")
+        yield {"token": "Sorry, I encountered an error generating the answer. Please try again."}
+        yield {"error": str(e), "done": True, "model": "error", "usage": {}}

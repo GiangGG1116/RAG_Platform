@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-service
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "llm-service" "context" .) | nindent 4 }}
+spec:
+  type: {{ .Values.llmService.service.type }}
+  selector:
+    {{- include "rag-platform.selectorLabels" (dict "component" "llm-service") | nindent 4 }}
+  ports:
+    - port: {{ .Values.llmService.service.port }}
+      targetPort: {{ .Values.llmService.port }}

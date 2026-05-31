@@ -1,7 +1,4 @@
 """Tests for LLM service."""
-
-from __future__ import annotations
-
 import pytest
 import asyncio
 

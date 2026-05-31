@@ -1,0 +1,388 @@
+# =============================================================================
+# RAG Platform — Helm Values
+# =============================================================================
+
+global:
+  namespace: rag-platform
+  imageRegistry: "rag-platform"
+  imagePullPolicy: IfNotPresent
+
+# -----------------------------------------------------------------------------
+# Application Config (populates ConfigMap)
+# -----------------------------------------------------------------------------
+config:
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "rag_platform"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  LLM_PROVIDER: "openai"
+  OPENAI_MODEL: "gpt-4o-mini"
+  OPENAI_EMBEDDING_MODEL: "text-embedding-3-small"
+  EMBEDDING_DIMENSION: "1536"
+  INGESTION_SERVICE_URL: "http://ingestion:8001"
+  RETRIEVAL_SERVICE_URL: "http://retrieval:8002"
+  LLM_SERVICE_URL: "http://llm-service:8003"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_WINDOW_SECONDS: "60"
+  CHUNK_SIZE: "512"
+  CHUNK_OVERLAP: "50"
+  CORS_ORIGINS: "https://rag.company.com,https://admin.company.com"
+  JWT_ALGORITHM: "HS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+
+# -----------------------------------------------------------------------------
+# Secrets (populates Secret)
+# -----------------------------------------------------------------------------
+secrets:
+  POSTGRES_USER: "rag_user"
+  POSTGRES_PASSWORD: "rag_secret_password"
+  RABBITMQ_USER: "rag_user"
+  RABBITMQ_PASSWORD: "rag_secret_password"
+  OPENAI_API_KEY: "sk-your-key-here"
+  API_KEYS: "default-api-key-change-me"
+  GRAFANA_ADMIN_PASSWORD: "admin"
+  JWT_SECRET_KEY: "change-me-to-a-secure-random-string-in-production"
+
+# -----------------------------------------------------------------------------
+# API Gateway
+# -----------------------------------------------------------------------------
+apiGateway:
+  image:
+    repository: api-gateway
+    tag: latest
+  replicas: 2
+  port: 8000
+  service:
+    type: LoadBalancer
+    port: 80
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 30
+  readinessProbe:
+    path: /ready
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+# -----------------------------------------------------------------------------
+# Ingestion Service
+# -----------------------------------------------------------------------------
+ingestion:
+  image:
+    repository: ingestion
+    tag: latest
+  replicas: 2
+  port: 8001
+  otelServiceName: "ingestion-service"
+  service:
+    type: ClusterIP
+    port: 8001
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 30
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+# -----------------------------------------------------------------------------
+# Retrieval Service
+# -----------------------------------------------------------------------------
+retrieval:
+  image:
+    repository: retrieval
+    tag: latest
+  replicas: 2
+  port: 8002
+  otelServiceName: "retrieval-service"
+  service:
+    type: ClusterIP
+    port: 8002
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 30
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilization: 70
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+# -----------------------------------------------------------------------------
+# LLM Service
+# -----------------------------------------------------------------------------
+llmService:
+  image:
+    repository: llm-service
+    tag: latest
+  replicas: 1
+  port: 8003
+  otelServiceName: "llm-service"
+  service:
+    type: ClusterIP
+    port: 8003
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 30
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilization: 70
+
+# -----------------------------------------------------------------------------
+# Worker
+# -----------------------------------------------------------------------------
+worker:
+  image:
+    repository: worker
+    tag: latest
+  replicas: 2
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  otelServiceName: "worker-service"
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  startupProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 6
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 60
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+# -----------------------------------------------------------------------------
+# PostgreSQL
+# -----------------------------------------------------------------------------
+postgres:
+  image: pgvector/pgvector:pg16
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+  storage:
+    size: 10Gi
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retentionDays: 7
+    storage:
+      size: 10Gi
+    image: postgres:16-alpine
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+
+# -----------------------------------------------------------------------------
+# RabbitMQ
+# -----------------------------------------------------------------------------
+rabbitmq:
+  image: rabbitmq:3.13-management-alpine
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  storage:
+    size: 5Gi
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 10
+
+# -----------------------------------------------------------------------------
+# Redis
+# -----------------------------------------------------------------------------
+redis:
+  image: redis:7-alpine
+  maxmemory: "256mb"
+  maxmemoryPolicy: "allkeys-lru"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+  storage:
+    size: 2Gi
+  livenessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# -----------------------------------------------------------------------------
+# Observability Stack
+# -----------------------------------------------------------------------------
+observability:
+  enabled: true
+
+  otelCollector:
+    image: otel/opentelemetry-collector-contrib:0.100.0
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    retention: "7d"
+    storage:
+      size: 10Gi
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    storage:
+      size: 2Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+
+# -----------------------------------------------------------------------------
+# Ingress
+# -----------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: rag-api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: api-gateway
+          port: 80
+    - host: grafana.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: grafana
+          port: 3000
+  tls: []
+  # - hosts:
+  #     - rag-api.example.com
+  #     - grafana.example.com
+  #   secretName: rag-platform-tls
+
+# -----------------------------------------------------------------------------
+# Network Policy
+# -----------------------------------------------------------------------------
+networkPolicy:
+  enabled: true

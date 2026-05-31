@@ -31,7 +31,7 @@ class Document(Base):
     source: Mapped[str] = mapped_column(String(1000), nullable=True)
     doc_type: Mapped[str] = mapped_column(String(50), nullable=False, default="text")
     status: Mapped[DocumentStatus] = mapped_column(
-        Enum(DocumentStatus),
+        Enum(DocumentStatus, native_enum=False),
         nullable=False,
         default=DocumentStatus.PENDING,
         index=True,

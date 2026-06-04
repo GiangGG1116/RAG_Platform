@@ -71,14 +71,25 @@ async def _run_pipeline_safe(
             title=title,
             tenant_id=tenant_id,
         )
-    except Exception:
-        logger.exception("Ingestion pipeline failed for document %s", doc_id)
+    except BaseException as e:
+        import asyncio
+        is_cancelled = isinstance(e, asyncio.CancelledError)
+        error_msg = "Ingestion pipeline cancelled (system shutdown)" if is_cancelled else str(e) or "Ingestion pipeline failed"
+        
+        logger.exception("Ingestion pipeline error for document %s: %s", doc_id, error_msg)
+        
         # Update document status to FAILED
-        async with get_db_session() as session:
-            doc = await session.get(Document, doc_id)
-            if doc:
-                doc.status = DocumentStatus.FAILED
-                doc.error_message = "Ingestion pipeline failed"
+        try:
+            async with get_db_session() as session:
+                doc = await session.get(Document, doc_id)
+                if doc:
+                    doc.status = DocumentStatus.FAILED
+                    doc.error_message = error_msg
+        except Exception as db_err:
+            logger.error("Could not update document status to failed: %s", db_err)
+            
+        if is_cancelled:
+            raise
 
 
 @router.get(

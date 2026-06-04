@@ -18,3 +18,24 @@ scrape_configs:
       - targets: ["otel-collector:8888"]
         labels:
           service: "otel-collector-internal"
+
+  # RabbitMQ broker metrics
+  - job_name: "rabbitmq"
+    static_configs:
+      - targets: ["rabbitmq:15692"]
+        labels:
+          service: "rabbitmq"
+
+  # PostgreSQL metrics
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+        labels:
+          service: "postgres"
+
+  # Redis metrics
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+        labels:
+          service: "redis"

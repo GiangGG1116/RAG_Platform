@@ -6,6 +6,103 @@ interface DocManagerProps {
   settings: AppSettings;
 }
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const READABLE_EXTENSIONS = new Set([
+  'txt',
+  'md',
+  'markdown',
+  'csv',
+  'json',
+  'html',
+  'htm',
+  'log',
+  'xml',
+  'yaml',
+  'yml',
+]);
+
+const DOC_TYPE_BY_EXTENSION: Record<string, string> = {
+  txt: 'text',
+  md: 'md',
+  markdown: 'md',
+  html: 'html',
+  htm: 'html',
+  pdf: 'pdf',
+};
+
+const getExtension = (fileName: string) => {
+  const parts = fileName.toLowerCase().split('.');
+  return parts.length > 1 ? parts.pop() || '' : '';
+};
+
+const getTitleFromFileName = (fileName: string) => {
+  const lastDot = fileName.lastIndexOf('.');
+  return lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+};
+
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+};
+
+const isReadableTextFile = (file: File) => {
+  const extension = getExtension(file.name);
+  return (
+    file.type.startsWith('text/') ||
+    file.type === 'application/json' ||
+    file.type === 'application/xml' ||
+    file.type === 'application/x-yaml' ||
+    READABLE_EXTENSIONS.has(extension)
+  );
+};
+
+const isPdfFile = (file: File) => {
+  return file.type === 'application/pdf' || getExtension(file.name) === 'pdf';
+};
+
+const inferDocType = (file: File) => {
+  if (isPdfFile(file)) return 'pdf';
+  const extension = getExtension(file.name);
+  return DOC_TYPE_BY_EXTENSION[extension] || 'text';
+};
+
+const extractPdfText = async (file: File) => {
+  const { GlobalWorkerOptions, getDocument } = await import('pdfjs-dist');
+  GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+  const loadingTask = getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+  const pdf = await loadingTask.promise;
+  const pageCount = pdf.numPages;
+  const pages: string[] = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item) => {
+          if (!('str' in item)) return '';
+          return `${item.str}${item.hasEOL ? '\n' : ' '}`;
+        })
+        .join('')
+        .trim();
+
+      if (pageText) {
+        pages.push(pageText);
+      }
+    }
+  } finally {
+    await pdf.destroy();
+  }
+
+  return {
+    content: pages.join('\n\n'),
+    pageCount,
+  };
+};
+
 export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [total, setTotal] = useState(0);
@@ -20,7 +117,13 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
   const [docType, setDocType] = useState('text');
   const [ingesting, setIngesting] = useState(false);
   const [ingestError, setIngestError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [isReadingFile, setIsReadingFile] = useState(false);
+  const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pollingIntervals = useRef<Record<string, any>>({});
 
   const fetchDocs = async (targetPage = page) => {
@@ -93,16 +196,115 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
     });
   }, [documents]);
 
+  const resetSelectedFile = (clearError = true) => {
+    setSelectedFile(null);
+    setPdfPageCount(null);
+    if (clearError) {
+      setFileError(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const loadFile = async (file: File | undefined | null) => {
+    if (!file) return;
+
+    setFileError(null);
+    setIngestError(null);
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setFileError(`File is too large. Maximum size is ${formatFileSize(MAX_UPLOAD_BYTES)}.`);
+      resetSelectedFile(false);
+      return;
+    }
+
+    if (!isPdfFile(file) && !isReadableTextFile(file)) {
+      setFileError('This upload supports PDF and text-based files. Paste extracted text for DOCX.');
+      resetSelectedFile(false);
+      return;
+    }
+
+    setIsReadingFile(true);
+    try {
+      const extractedPdf = isPdfFile(file) ? await extractPdfText(file) : null;
+      const fileContent = extractedPdf ? extractedPdf.content : await file.text();
+      if (!fileContent.trim()) {
+        setFileError(
+          isPdfFile(file)
+            ? 'No readable text was found in this PDF. Run OCR first if this is a scanned document.'
+            : 'Selected file is empty.'
+        );
+        resetSelectedFile(false);
+        return;
+      }
+
+      setSelectedFile(file);
+      setContent(fileContent);
+      setDocType(inferDocType(file));
+      setPdfPageCount(extractedPdf?.pageCount ?? null);
+      if (!title.trim()) {
+        setTitle(getTitleFromFileName(file.name));
+      }
+    } catch {
+      setFileError(
+        isPdfFile(file)
+          ? 'Could not extract text from this PDF. Try another PDF or paste the extracted content manually.'
+          : 'Could not read this file. Try a UTF-8 text file or paste the content manually.'
+      );
+      resetSelectedFile(false);
+    } finally {
+      setIsReadingFile(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    loadFile(e.target.files?.[0]);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingFile(false);
+    loadFile(e.dataTransfer.files?.[0]);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingFile(false);
+  };
+
+  const handleFilePickerKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInputRef.current?.click();
+    }
+  };
+
   const handleIngest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !content.trim() || fileError) return;
 
     setIngesting(true);
     setIngestError(null);
     try {
-      const newDoc = await createDocument(settings, title, content, docType);
+      const fileMetadata = selectedFile
+        ? {
+            source: 'frontend-file-upload',
+            filename: selectedFile.name,
+            file_size: selectedFile.size,
+            file_type: selectedFile.type || 'unknown',
+            ...(pdfPageCount ? { page_count: pdfPageCount } : {}),
+          }
+        : {};
+      const newDoc = await createDocument(settings, title.trim(), content, docType, fileMetadata);
       setTitle('');
       setContent('');
+      setDocType('text');
+      resetSelectedFile();
       
       // Prepend the new document to list
       setDocuments((prev) => [newDoc, ...prev.slice(0, pageSize - 1)]);
@@ -146,7 +348,7 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
       <div className="panel-header">
         <div>
           <h2>Document Management</h2>
-          <div className="panel-title-desc">Upload, process, and manage text files for the RAG search index.</div>
+          <div className="panel-title-desc">Upload, process, and manage PDF or text files for the RAG search index.</div>
         </div>
         <button className="btn btn-secondary" onClick={() => fetchDocs(page)} disabled={loading}>
           {loading ? 'Refreshing...' : 'Refresh List'}
@@ -177,7 +379,7 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
                 </div>
                 <h3>No documents ingested</h3>
                 <p style={{ maxWidth: '400px', margin: '8px 0 0 0', fontSize: '13px' }}>
-                  Paste a document in the form to your right to start generating embedding vector chunks.
+                  Upload a PDF or text document to start generating embedding vector chunks.
                 </p>
               </div>
             ) : (
@@ -254,12 +456,60 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
 
         {/* Right Side: Ingestion Form */}
         <div className="ingest-card">
-          <h3>Ingest Document</h3>
+          <h3>Upload Document</h3>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-            Submit raw content. The platform will automatically extract, chunk, and embed the document.
+            Drop a PDF or text-based file. The platform will extract, chunk, and embed the document.
           </p>
 
           <form onSubmit={handleIngest}>
+            <div className="form-group">
+              <label className="form-label">Document File</label>
+              <div
+                className={`file-dropzone ${isDraggingFile ? 'dragging' : ''} ${fileError ? 'error' : ''}`}
+                onClick={() => !isReadingFile && fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onKeyDown={handleFilePickerKeyDown}
+                role="button"
+                tabIndex={0}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="file-input"
+                  accept=".pdf,.txt,.md,.markdown,.csv,.json,.html,.htm,.log,.xml,.yaml,.yml,application/pdf,text/*,application/json,application/xml"
+                  onChange={handleFileChange}
+                  disabled={isReadingFile}
+                />
+                <div className="file-dropzone-icon">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0l-4 4m4-4l4 4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 16.5V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.5" />
+                  </svg>
+                </div>
+                <div className="file-dropzone-copy">
+                  <strong>{isReadingFile ? 'Extracting document text...' : selectedFile ? selectedFile.name : 'Choose or drop a file'}</strong>
+                  <span>
+                    {isReadingFile
+                      ? 'Please wait while the document is parsed'
+                      : selectedFile
+                        ? `${formatFileSize(selectedFile.size)} loaded into content${pdfPageCount ? ` from ${pdfPageCount} pages` : ''}`
+                        : 'PDF, TXT, MD, CSV, JSON, HTML, XML, YAML, LOG up to 10MB'}
+                  </span>
+                </div>
+              </div>
+              {selectedFile && (
+                <div className="file-meta-row">
+                  <span>Type: {docType.toUpperCase()}</span>
+                  <button type="button" className="link-button" onClick={() => resetSelectedFile()}>
+                    Remove file
+                  </button>
+                </div>
+              )}
+              {fileError && <div className="file-error">{fileError}</div>}
+            </div>
+
             <div className="form-group">
               <label className="form-label">Document Title</label>
               <input
@@ -281,8 +531,10 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
                 style={{ background: 'var(--bg-secondary)' }}
               >
                 <option value="text">Plain Text</option>
-                <option value="pdf">PDF File (Simulation)</option>
-                <option value="docx">Word File (Simulation)</option>
+                <option value="md">Markdown</option>
+                <option value="html">HTML</option>
+                <option value="pdf">PDF</option>
+                <option value="docx">Word Text</option>
               </select>
             </div>
 
@@ -293,7 +545,7 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={10}
-                placeholder="Paste the document text content here..."
+                placeholder="Upload a text file or paste the document content here..."
                 style={{ resize: 'vertical', minHeight: '150px', fontFamily: 'inherit' }}
                 required
               ></textarea>
@@ -305,8 +557,13 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
               </div>
             )}
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={ingesting}>
-              {ingesting ? 'Submitting...' : 'Ingest Document'}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: '100%' }}
+              disabled={ingesting || isReadingFile || Boolean(fileError) || !title.trim() || !content.trim()}
+            >
+              {ingesting ? 'Submitting...' : 'Upload Document'}
             </button>
           </form>
         </div>

@@ -8,25 +8,25 @@
   "links": [],
   "panels": [
     {
-      "title": "HTTP Requests Total (by service)",
+      "title": "HTTP Request Rate (by service)",
       "type": "timeseries",
       "datasource": "Prometheus",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         {
-          "expr": "sum(rate(rag_platform_http_requests_total[5m])) by (service_name)",
+          "expr": "sum(rate(rag_platform_http_server_duration_milliseconds_count[5m])) by (service_name)",
           "legendFormat": "{{service_name}}"
         }
       ]
     },
     {
-      "title": "HTTP Request Duration (p95)",
+      "title": "HTTP Request Duration p95 (ms)",
       "type": "timeseries",
       "datasource": "Prometheus",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(rag_platform_http_request_duration_seconds_bucket[5m])) by (le, service_name))",
+          "expr": "histogram_quantile(0.95, sum(rate(rag_platform_http_server_duration_milliseconds_bucket[5m])) by (le, service_name))",
           "legendFormat": "p95 {{service_name}}"
         }
       ]
@@ -38,7 +38,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
       "targets": [
         {
-          "expr": "sum(rag_platform_http_active_requests) by (service_name)",
+          "expr": "sum(rag_platform_http_server_active_requests) by (service_name)",
           "legendFormat": "{{service_name}}"
         }
       ]
@@ -86,7 +86,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "targets": [
         {
-          "expr": "sum(rate(rag_platform_http_requests_total{http_status_code=~\"5..\"}[5m])) by (service_name)",
+          "expr": "sum(rate(rag_platform_http_server_duration_milliseconds_count{http_status_code=~\"5..\"}[5m])) by (service_name) or sum(rate(rag_platform_http_server_duration_milliseconds_count[5m])) by (service_name) * 0",
           "legendFormat": "5xx {{service_name}}"
         }
       ]

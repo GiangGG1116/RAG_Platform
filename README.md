@@ -10,13 +10,15 @@ Client → API Gateway → Ingestion Service  → RabbitMQ → Worker (Embedding
                      → LLM Service        → OpenAI / Local Model
 ```
 
-| Service | Port | Description |
-|---------|------|-------------|
-| **API Gateway** | 8000 | Central entry point, auth, rate limiting |
-| **Ingestion** | 8001 | Document upload, chunking (LangGraph pipeline) |
-| **Retrieval** | 8002 | Hybrid search, RAG generation (LangGraph pipeline) |
-| **LLM Service** | 8003 | LLM orchestration (OpenAI / Local) |
-| **Worker** | — | Async embedding generation via RabbitMQ |
+| Service               | Port | Description                                        |
+| --------------------- | ---- | -------------------------------------------------- |
+| **API Gateway** | 8000 | Central entry point, auth, rate limiting           |
+| **Ingestion**   | 8001 | Document upload, chunking (LangGraph pipeline)     |
+| **Retrieval**   | 8002 | Hybrid search, RAG generation (LangGraph pipeline) |
+| **LLM Service** | 8003 | LLM orchestration (OpenAI / Local)                 |
+|                       |      |                                                    |
+|                       |      |                                                    |
+| **Worker**      | —   | Async embedding generation via RabbitMQ            |
 
 ## 🛠️ Tech Stack
 
@@ -32,10 +34,12 @@ Client → API Gateway → Ingestion Service  → RabbitMQ → Worker (Embedding
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Docker & Docker Compose
 - (Optional) `kubectl` for K8s deployment
 
 ### 1. Clone & Configure
+
 ```bash
 cd rag_micro_2
 cp .env.example .env
@@ -43,6 +47,7 @@ cp .env.example .env
 ```
 
 ### 2. Start All Services
+
 ```bash
 # Core services only
 make up
@@ -52,6 +57,7 @@ make up-full
 ```
 
 ### 3. Verify
+
 ```bash
 # Check all services
 make ps
@@ -64,6 +70,7 @@ curl http://localhost:8000/ready
 ```
 
 ### 4. Try It Out
+
 ```bash
 # Ingest a document
 curl -X POST http://localhost:8000/api/v1/documents \
@@ -87,19 +94,21 @@ curl -X POST http://localhost:8000/api/v1/query \
 
 ## 📊 Observability
 
-| Tool | URL | Credentials |
-|------|-----|-------------|
-| Grafana | http://localhost:3000 | admin / admin |
-| Prometheus | http://localhost:9090 | — |
+| Tool                | URL                    | Credentials                    |
+| ------------------- | ---------------------- | ------------------------------ |
+| Grafana             | http://localhost:3001  | admin / admin                  |
+| Prometheus          | http://localhost:9090  | —                             |
 | RabbitMQ Management | http://localhost:15672 | rag_user / rag_secret_password |
 
 ## 🔑 Key Features
 
 ### LangGraph Pipelines
+
 - **Ingestion Pipeline**: `validate → extract → chunk → publish → update_status`
 - **RAG Pipeline**: `analyze_query → retrieve → rerank → generate → cite`
 
 ### Production Features
+
 - ✅ API Key authentication
 - ✅ Redis-based rate limiting (sliding window)
 - ✅ Async document processing via RabbitMQ

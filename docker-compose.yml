@@ -175,8 +175,10 @@ services:
       dockerfile: services/llm_service/Dockerfile
     environment:
       <<: *common-env
-      OTEL_SERVICE_NAME: llm-service
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-placeholder}
+      # OTEL_SERVICE_NAME: llm-service
+      # OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-placeholder}
+      LLM_PROVIDER: openai 
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     ports:
       - "8003:8003"
     deploy:

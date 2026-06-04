@@ -202,6 +202,7 @@ async def generate_node(state: dict[str, Any]) -> dict[str, Any]:
     prompt = f"""Based on the following context, answer the question accurately.
 Always cite your sources using [Source N] format.
 If the context doesn't contain enough information, say so.
+Answer in the same language as the user's question.
 
 Context:
 {context}
@@ -278,6 +279,7 @@ def build_rag_prompt(question: str, chunks: list[dict]) -> str:
     return f"""Based on the following context, answer the question accurately.
 Always cite your sources using [Source N] format.
 If the context doesn't contain enough information, say so.
+Answer in the same language as the user's question.
 
 Context:
 {context}

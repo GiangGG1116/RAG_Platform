@@ -5,9 +5,6 @@ StateGraph: analyze_query → retrieve → rerank → generate → cite
 Full RAG pipeline with hybrid retrieval, reranking, and citation verification.
 Supports both blocking (ainvoke) and streaming (SSE) execution modes.
 """
-
-from __future__ import annotations
-
 import json
 import logging
 import time

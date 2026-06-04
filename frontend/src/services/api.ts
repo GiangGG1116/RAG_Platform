@@ -57,6 +57,47 @@ export interface DocumentListResponse {
   pages: number;
 }
 
+// ── Conversation / Chat History ───────────────────────────────
+
+export interface ChatMessageData {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  meta: Record<string, any>;
+  position: number;
+  created_at: string;
+}
+
+export interface ConversationData {
+  id: string;
+  tenant_id: string;
+  title: string;
+  memory_id: string | null;
+  messages: ChatMessageData[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationSummary {
+  id: string;
+  tenant_id: string;
+  title: string;
+  memory_id: string | null;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationListResponse {
+  items: ConversationSummary[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+
 /**
  * Fetch list of documents with pagination
  */
@@ -273,4 +314,110 @@ export async function queryRAGStream(
     callbacks.onError?.(err.message || "Stream read connection error.");
     throw err;
   }
+}
+
+// ── Conversation / Chat History API ──────────────────────────
+
+function _headers(settings: AppSettings): Record<string, string> {
+  return { "X-API-Key": settings.apiKey, "Content-Type": "application/json" };
+}
+
+/**
+ * List conversations for a tenant (newest first)
+ */
+export async function listConversations(
+  settings: AppSettings,
+  page = 1,
+  pageSize = 50
+): Promise<ConversationListResponse> {
+  const url = new URL(`${settings.apiUrl}/api/v1/conversations`);
+  url.searchParams.set("tenant_id", settings.tenantId);
+  url.searchParams.set("page", page.toString());
+  url.searchParams.set("page_size", pageSize.toString());
+
+  const res = await fetch(url.toString(), { headers: _headers(settings) });
+  if (!res.ok) throw new Error(`listConversations: ${res.status}`);
+  return res.json();
+}
+
+/**
+ * Create a new conversation record in PostgreSQL
+ */
+export async function createConversation(
+  settings: AppSettings,
+  title: string,
+  memoryId?: string | null
+): Promise<ConversationData> {
+  const res = await fetch(`${settings.apiUrl}/api/v1/conversations`, {
+    method: "POST",
+    headers: _headers(settings),
+    body: JSON.stringify({ tenant_id: settings.tenantId, title, memory_id: memoryId ?? null }),
+  });
+  if (!res.ok) throw new Error(`createConversation: ${res.status}`);
+  return res.json();
+}
+
+/**
+ * Fetch a conversation with all its messages
+ */
+export async function getConversation(
+  settings: AppSettings,
+  conversationId: string
+): Promise<ConversationData> {
+  const res = await fetch(`${settings.apiUrl}/api/v1/conversations/${conversationId}`, {
+    headers: _headers(settings),
+  });
+  if (res.status === 404) throw new Error("Conversation not found");
+  if (!res.ok) throw new Error(`getConversation: ${res.status}`);
+  return res.json();
+}
+
+/**
+ * Rename a conversation or update its memory_id
+ */
+export async function updateConversation(
+  settings: AppSettings,
+  conversationId: string,
+  patch: { title?: string; memory_id?: string | null }
+): Promise<ConversationData> {
+  const res = await fetch(`${settings.apiUrl}/api/v1/conversations/${conversationId}`, {
+    method: "PATCH",
+    headers: _headers(settings),
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error(`updateConversation: ${res.status}`);
+  return res.json();
+}
+
+/**
+ * Delete a conversation and all its messages
+ */
+export async function deleteConversationApi(
+  settings: AppSettings,
+  conversationId: string
+): Promise<void> {
+  const res = await fetch(`${settings.apiUrl}/api/v1/conversations/${conversationId}`, {
+    method: "DELETE",
+    headers: _headers(settings),
+  });
+  if (!res.ok && res.status !== 404) throw new Error(`deleteConversation: ${res.status}`);
+}
+
+/**
+ * Append one or more messages to a conversation
+ */
+export async function addMessages(
+  settings: AppSettings,
+  conversationId: string,
+  messages: Array<{ role: "user" | "assistant"; content: string; meta?: Record<string, any> }>
+): Promise<ConversationData> {
+  const res = await fetch(`${settings.apiUrl}/api/v1/conversations/${conversationId}/messages`, {
+    method: "POST",
+    headers: _headers(settings),
+    body: JSON.stringify({
+      messages: messages.map((m) => ({ role: m.role, content: m.content, meta: m.meta ?? {} })),
+    }),
+  });
+  if (!res.ok) throw new Error(`addMessages: ${res.status}`);
+  return res.json();
 }

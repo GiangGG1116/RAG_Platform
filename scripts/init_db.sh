@@ -68,6 +68,44 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
         BEFORE UPDATE ON chunks
         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+    -- Create conversations table for persistent chat history
+    CREATE TABLE IF NOT EXISTS conversations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id VARCHAR(100) NOT NULL DEFAULT 'default',
+        title VARCHAR(500) NOT NULL DEFAULT 'New Conversation',
+        memory_id VARCHAR(200),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Create chat_messages table
+    CREATE TABLE IF NOT EXISTS chat_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        role VARCHAR(20) NOT NULL,
+        content TEXT NOT NULL,
+        meta JSONB NOT NULL DEFAULT '{}',
+        position INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Indexes for conversations
+    CREATE INDEX IF NOT EXISTS idx_conversations_tenant_updated ON conversations(tenant_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_conversations_memory_id ON conversations(memory_id);
+
+    -- Indexes for chat_messages
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_position ON chat_messages(conversation_id, position);
+
+    -- Triggers for updated_at on new tables
+    CREATE OR REPLACE TRIGGER update_conversations_updated_at
+        BEFORE UPDATE ON conversations
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+    CREATE OR REPLACE TRIGGER update_chat_messages_updated_at
+        BEFORE UPDATE ON chat_messages
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 EOSQL
 
 echo "Database initialized with pgvector extension and tables."

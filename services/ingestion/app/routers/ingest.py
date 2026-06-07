@@ -1,7 +1,4 @@
 """Ingestion endpoints - document upload and management."""
-
-from __future__ import annotations
-
 import logging
 import math
 from typing import Any

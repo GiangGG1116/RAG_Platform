@@ -70,7 +70,7 @@ const inferDocType = (file: File) => {
 
 const extractPdfText = async (file: File) => {
   const { GlobalWorkerOptions, getDocument } = await import('pdfjs-dist');
-  GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
   const loadingTask = getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
   const pdf = await loadingTask.promise;
@@ -111,19 +111,14 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Ingestion Form State
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [docType, setDocType] = useState('text');
+  // Ingestion State
   const [ingesting, setIngesting] = useState(false);
   const [ingestError, setIngestError] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const [isReadingFile, setIsReadingFile] = useState(false);
-  const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; filename: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
   const pollingIntervals = useRef<Record<string, any>>({});
 
   const fetchDocs = async (targetPage = page) => {
@@ -196,76 +191,91 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
     });
   }, [documents]);
 
-  const resetSelectedFile = (clearError = true) => {
-    setSelectedFile(null);
-    setPdfPageCount(null);
-    if (clearError) {
-      setFileError(null);
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const loadFile = async (file: File | undefined | null) => {
-    if (!file) return;
-
-    setFileError(null);
+  const processFilesBatch = async (files: FileList | File[] | undefined | null) => {
+    if (!files || files.length === 0) return;
+    
     setIngestError(null);
-
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setFileError(`File is too large. Maximum size is ${formatFileSize(MAX_UPLOAD_BYTES)}.`);
-      resetSelectedFile(false);
+    const fileArray = Array.from(files).filter(f => isPdfFile(f) || isReadableTextFile(f));
+    
+    if (fileArray.length === 0) {
+      setIngestError('No supported files found (PDF, TXT, MD, CSV, HTML, JSON, etc.)');
       return;
     }
 
-    if (!isPdfFile(file) && !isReadableTextFile(file)) {
-      setFileError('This upload supports PDF and text-based files. Paste extracted text for DOCX.');
-      resetSelectedFile(false);
+    const overSizeFiles = fileArray.filter(f => f.size > MAX_UPLOAD_BYTES);
+    if (overSizeFiles.length > 0) {
+      setIngestError(`${overSizeFiles.length} files exceed the ${formatFileSize(MAX_UPLOAD_BYTES)} limit.`);
       return;
     }
 
-    setIsReadingFile(true);
-    try {
-      const extractedPdf = isPdfFile(file) ? await extractPdfText(file) : null;
-      const fileContent = extractedPdf ? extractedPdf.content : await file.text();
-      if (!fileContent.trim()) {
-        setFileError(
-          isPdfFile(file)
-            ? 'No readable text was found in this PDF. Run OCR first if this is a scanned document.'
-            : 'Selected file is empty.'
-        );
-        resetSelectedFile(false);
-        return;
-      }
+    setIngesting(true);
+    setBatchProgress({ current: 0, total: fileArray.length, filename: '' });
 
-      setSelectedFile(file);
-      setContent(fileContent);
-      setDocType(inferDocType(file));
-      setPdfPageCount(extractedPdf?.pageCount ?? null);
-      if (!title.trim()) {
-        setTitle(getTitleFromFileName(file.name));
+    let successCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      setBatchProgress({ current: i + 1, total: fileArray.length, filename: file.name });
+
+      try {
+        const extractedPdf = isPdfFile(file) ? await extractPdfText(file) : null;
+        const fileContent = extractedPdf ? extractedPdf.content : await file.text();
+        
+        if (!fileContent.trim()) {
+           errors.push(`${file.name}: No readable text found.`);
+           continue;
+        }
+
+        const docTitle = getTitleFromFileName(file.name);
+        const inferredDocType = inferDocType(file);
+        const fileMetadata = {
+            source: 'frontend-file-upload',
+            filename: file.name,
+            file_size: file.size,
+            file_type: file.type || 'unknown',
+            ...(extractedPdf?.pageCount ? { page_count: extractedPdf.pageCount } : {}),
+        };
+
+        const newDoc = await createDocument(settings, docTitle, fileContent, inferredDocType, fileMetadata);
+        successCount++;
+        
+        setDocuments((prev) => [newDoc, ...prev.slice(0, pageSize - 1)]);
+        setTotal((prev) => prev + 1);
+        startPolling(newDoc.id);
+
+      } catch (err: any) {
+        console.error(`Failed to ingest ${file.name}:`, err);
+        errors.push(`${file.name}: ${err.message || 'Unknown error'}`);
       }
-    } catch {
-      setFileError(
-        isPdfFile(file)
-          ? 'Could not extract text from this PDF. Try another PDF or paste the extracted content manually.'
-          : 'Could not read this file. Try a UTF-8 text file or paste the content manually.'
-      );
-      resetSelectedFile(false);
-    } finally {
-      setIsReadingFile(false);
     }
+
+    setIngesting(false);
+    setBatchProgress(null);
+    
+    if (successCount === 0) {
+        const errorDetail = errors.length > 0 ? errors.slice(0, 3).join(' | ') : "Failed to ingest any files.";
+        setIngestError(`Error: ${errorDetail}${errors.length > 3 ? '...' : ''}`);
+    } else if (errors.length > 0) {
+        // Some succeeded, some failed
+        alert(`Partially completed. ${errors.length} files failed:\n` + errors.slice(0, 5).join('\n'));
+        fetchDocs(1);
+    } else {
+        fetchDocs(1);
+    }
+    
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (folderInputRef.current) folderInputRef.current.value = '';
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    loadFile(e.target.files?.[0]);
+    processFilesBatch(e.target.files);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDraggingFile(false);
-    loadFile(e.dataTransfer.files?.[0]);
+    processFilesBatch(e.dataTransfer.files);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -275,50 +285,6 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
 
   const handleDragLeave = () => {
     setIsDraggingFile(false);
-  };
-
-  const handleFilePickerKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      fileInputRef.current?.click();
-    }
-  };
-
-  const handleIngest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !content.trim() || fileError) return;
-
-    setIngesting(true);
-    setIngestError(null);
-    try {
-      const fileMetadata = selectedFile
-        ? {
-            source: 'frontend-file-upload',
-            filename: selectedFile.name,
-            file_size: selectedFile.size,
-            file_type: selectedFile.type || 'unknown',
-            ...(pdfPageCount ? { page_count: pdfPageCount } : {}),
-          }
-        : {};
-      const newDoc = await createDocument(settings, title.trim(), content, docType, fileMetadata);
-      setTitle('');
-      setContent('');
-      setDocType('text');
-      resetSelectedFile();
-      
-      // Prepend the new document to list
-      setDocuments((prev) => [newDoc, ...prev.slice(0, pageSize - 1)]);
-      setTotal((prev) => prev + 1);
-      
-      // Start polling status immediately if it's processing
-      if (newDoc.status === 'processing' || newDoc.status === 'pending') {
-        startPolling(newDoc.id);
-      }
-    } catch (err: any) {
-      setIngestError(err.message || 'Failed to submit document');
-    } finally {
-      setIngesting(false);
-    }
   };
 
   const handleDelete = async (docId: string) => {
@@ -456,116 +422,93 @@ export const DocManager: React.FC<DocManagerProps> = ({ settings }) => {
 
         {/* Right Side: Ingestion Form */}
         <div className="ingest-card">
-          <h3>Upload Document</h3>
+          <h3>Upload Documents</h3>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-            Drop a PDF or text-based file. The platform will extract, chunk, and embed the document.
+            Select individual files or an entire folder to batch extract, chunk, and embed them automatically.
           </p>
 
-          <form onSubmit={handleIngest}>
-            <div className="form-group">
-              <label className="form-label">Document File</label>
-              <div
-                className={`file-dropzone ${isDraggingFile ? 'dragging' : ''} ${fileError ? 'error' : ''}`}
-                onClick={() => !isReadingFile && fileInputRef.current?.click()}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onKeyDown={handleFilePickerKeyDown}
-                role="button"
-                tabIndex={0}
+          <div
+            className={`file-dropzone ${isDraggingFile ? 'dragging' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            style={{ padding: '40px 20px', minHeight: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <div className="file-dropzone-icon" style={{ marginBottom: '16px' }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0l-4 4m4-4l4 4" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20 16.5V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.5" />
+              </svg>
+            </div>
+            
+            <strong style={{ fontSize: '16px', marginBottom: '8px' }}>Drag and drop files here</strong>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+              Supported: PDF, TXT, MD, CSV, JSON, HTML, XML, YAML, LOG
+            </span>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => !ingesting && fileInputRef.current?.click()}
+                disabled={ingesting}
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="file-input"
-                  accept=".pdf,.txt,.md,.markdown,.csv,.json,.html,.htm,.log,.xml,.yaml,.yml,application/pdf,text/*,application/json,application/xml"
-                  onChange={handleFileChange}
-                  disabled={isReadingFile}
+                Select Files
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => !ingesting && folderInputRef.current?.click()}
+                disabled={ingesting}
+              >
+                Select Folder
+              </button>
+            </div>
+
+            {/* Hidden inputs */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.txt,.md,.markdown,.csv,.json,.html,.htm,.log,.xml,.yaml,.yml,application/pdf,text/*,application/json,application/xml"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+            <input
+              ref={folderInputRef}
+              type="file"
+              {...{ webkitdirectory: "", directory: "" } as any}
+              multiple
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+          </div>
+
+          {batchProgress && (
+            <div style={{ marginTop: '20px', padding: '16px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                <strong style={{ color: 'var(--primary-color)' }}>Uploading {batchProgress.current} of {batchProgress.total}</strong>
+                <span style={{ color: 'var(--text-muted)' }}>{Math.round((batchProgress.current / batchProgress.total) * 100)}%</span>
+              </div>
+              <div style={{ width: '100%', background: 'var(--bg-card)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                <div 
+                  style={{ 
+                    height: '100%', 
+                    background: 'var(--primary-color)', 
+                    width: `${(batchProgress.current / batchProgress.total) * 100}%`,
+                    transition: 'width 0.2s ease-out'
+                  }}
                 />
-                <div className="file-dropzone-icon">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0l-4 4m4-4l4 4" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 16.5V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.5" />
-                  </svg>
-                </div>
-                <div className="file-dropzone-copy">
-                  <strong>{isReadingFile ? 'Extracting document text...' : selectedFile ? selectedFile.name : 'Choose or drop a file'}</strong>
-                  <span>
-                    {isReadingFile
-                      ? 'Please wait while the document is parsed'
-                      : selectedFile
-                        ? `${formatFileSize(selectedFile.size)} loaded into content${pdfPageCount ? ` from ${pdfPageCount} pages` : ''}`
-                        : 'PDF, TXT, MD, CSV, JSON, HTML, XML, YAML, LOG up to 10MB'}
-                  </span>
-                </div>
               </div>
-              {selectedFile && (
-                <div className="file-meta-row">
-                  <span>Type: {docType.toUpperCase()}</span>
-                  <button type="button" className="link-button" onClick={() => resetSelectedFile()}>
-                    Remove file
-                  </button>
-                </div>
-              )}
-              {fileError && <div className="file-error">{fileError}</div>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Document Title</label>
-              <input
-                type="text"
-                className="form-input"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Q4 Financial Report"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Document Type</label>
-              <select
-                className="form-input"
-                value={docType}
-                onChange={(e) => setDocType(e.target.value)}
-                style={{ background: 'var(--bg-secondary)' }}
-              >
-                <option value="text">Plain Text</option>
-                <option value="md">Markdown</option>
-                <option value="html">HTML</option>
-                <option value="pdf">PDF</option>
-                <option value="docx">Word Text</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Content</label>
-              <textarea
-                className="form-input"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={10}
-                placeholder="Upload a text file or paste the document content here..."
-                style={{ resize: 'vertical', minHeight: '150px', fontFamily: 'inherit' }}
-                required
-              ></textarea>
-            </div>
-
-            {ingestError && (
-              <div style={{ color: '#fca5a5', fontSize: '13px', marginBottom: '16px' }}>
-                Error: {ingestError}
+              <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                Processing: {batchProgress.filename}
               </div>
-            )}
+            </div>
+          )}
 
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%' }}
-              disabled={ingesting || isReadingFile || Boolean(fileError) || !title.trim() || !content.trim()}
-            >
-              {ingesting ? 'Submitting...' : 'Upload Document'}
-            </button>
-          </form>
+          {ingestError && (
+            <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '8px', color: '#fca5a5', fontSize: '14px' }}>
+              Error: {ingestError}
+            </div>
+          )}
         </div>
       </div>
     </div>

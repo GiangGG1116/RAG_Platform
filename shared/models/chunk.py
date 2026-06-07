@@ -1,7 +1,4 @@
 """Chunk SQLAlchemy model with pgvector embedding support."""
-
-from __future__ import annotations
-
 import uuid
 
 from pgvector.sqlalchemy import Vector

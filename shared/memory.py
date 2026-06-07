@@ -4,9 +4,6 @@ Conversation Memory — Redis-backed sliding window.
 Stores chat history per conversation as a Redis list, with
 configurable max turns and TTL for automatic expiration.
 """
-
-from __future__ import annotations
-
 import json
 import logging
 from typing import Any

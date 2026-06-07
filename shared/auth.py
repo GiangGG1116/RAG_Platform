@@ -4,9 +4,6 @@ JWT Authentication with Role-Based Access Control (RBAC).
 Provides token creation, verification, and role-based authorization
 for the API Gateway. Supports both JWT Bearer tokens and legacy API Keys.
 """
-
-from __future__ import annotations
-
 import logging
 from datetime import datetime, timedelta, timezone
 from enum import Enum

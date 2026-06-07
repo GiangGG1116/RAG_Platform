@@ -50,22 +50,11 @@ format: ## Format code
 	ruff format .
 
 # ─── Kubernetes ──────────────────────────────────────────
-k8s-apply: ## Apply K8s manifests
-	kubectl apply -f k8s/namespace.yaml
-	kubectl apply -f k8s/configmap.yaml
-	kubectl apply -f k8s/secrets.yaml
-	kubectl apply -f k8s/postgres/
-	kubectl apply -f k8s/rabbitmq/
-	kubectl apply -f k8s/redis/
-	kubectl apply -f k8s/api-gateway/
-	kubectl apply -f k8s/ingestion/
-	kubectl apply -f k8s/retrieval/
-	kubectl apply -f k8s/llm-service/
-	kubectl apply -f k8s/worker/
-	kubectl apply -f k8s/observability/
+k8s-apply: ## Deploy to K8s using Helm
+	helm upgrade --install rag-platform ./helm/rag-platform --namespace rag-platform --create-namespace $$(if [ -f ./helm/rag-platform/secrets.yaml ]; then echo "-f ./helm/rag-platform/secrets.yaml"; fi)
 
-k8s-delete: ## Delete K8s resources
-	kubectl delete -f k8s/ --recursive --ignore-not-found
+k8s-delete: ## Delete K8s resources using Helm
+	helm uninstall rag-platform --namespace rag-platform
 
 # ─── Cleanup ─────────────────────────────────────────────
 clean: ## Remove all containers, volumes, and images

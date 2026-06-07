@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 # Copy pdfjs worker into public/ so it's served as a static asset in production
-RUN cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs
+RUN cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.js
 RUN npm run build
 
 # Production stage

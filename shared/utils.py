@@ -1,7 +1,5 @@
 """Common utilities for the RAG platform."""
 
-from __future__ import annotations
-
 import hashlib
 import time
 import uuid

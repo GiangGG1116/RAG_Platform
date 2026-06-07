@@ -1,7 +1,4 @@
 """Integration tests for API Gateway — auth, rate limiting, and proxying."""
-
-from __future__ import annotations
-
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 

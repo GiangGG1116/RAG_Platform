@@ -4,9 +4,6 @@ Observability setup: OpenTelemetry tracing, Prometheus metrics, structured loggi
 Call `setup_observability(service_name)` during app startup to configure
 tracing, metrics, and structured logging for any microservice.
 """
-
-from __future__ import annotations
-
 import logging
 import sys
 from typing import Any

@@ -1,7 +1,4 @@
 """Admin endpoints — token management and system administration."""
-
-from __future__ import annotations
-
 import logging
 from typing import Any
 

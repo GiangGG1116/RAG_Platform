@@ -8,9 +8,6 @@ This router handles all CRUD for persistent chat history:
   DELETE /conversations/{id}       — delete conversation + messages
   POST /conversations/{id}/messages — append message(s)
 """
-
-from __future__ import annotations
-
 import logging
 import math
 import uuid

@@ -4,9 +4,6 @@ Centralized configuration using Pydantic Settings.
 All microservices import from this module to ensure consistent
 environment variable handling across the platform.
 """
-
-from __future__ import annotations
-
 from functools import lru_cache
 from typing import Literal
 
@@ -79,7 +76,7 @@ class Settings(BaseSettings):
 
     # ── Service URLs ─────────────────────────────────────
     api_gateway_host: str = "0.0.0.0"
-    api_gateway_port: int = 8000
+    api_gateway_run_port: int = 8000
     ingestion_service_url: str = "http://ingestion:8001"
     retrieval_service_url: str = "http://retrieval:8002"
     llm_service_url: str = "http://llm-service:8003"

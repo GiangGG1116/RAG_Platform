@@ -1,7 +1,4 @@
 """OpenAI LLM provider with retry and rate limiting."""
-
-from __future__ import annotations
-
 import asyncio
 import json
 import logging

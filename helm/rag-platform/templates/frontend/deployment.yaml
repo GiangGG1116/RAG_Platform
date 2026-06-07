@@ -1,0 +1,28 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "frontend" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rag-platform.selectorLabels" (dict "component" "frontend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rag-platform.selectorLabels" (dict "component" "frontend") | nindent 8 }}
+    spec:
+      containers:
+        - name: frontend
+          image: {{ include "rag-platform.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.frontend.image.repository "tag" .Values.frontend.image.tag) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 3000
+              name: http
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+{{- end }}

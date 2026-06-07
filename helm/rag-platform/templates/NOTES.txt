@@ -1,4 +1,4 @@
-🚀 RAG Platform has been deployed!
+RAG Platform has been deployed!
 
 Namespace: {{ include "rag-platform.namespace" . }}
 
@@ -27,4 +27,4 @@ Namespace: {{ include "rag-platform.namespace" . }}
 {{- end }}
 {{- end }}
 
-⚠️  Remember to update secrets in values.yaml before going to production!
+Remember to update secrets in values.yaml before going to production!

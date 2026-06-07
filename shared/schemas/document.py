@@ -1,7 +1,4 @@
 """Pydantic schemas for Document endpoints."""
-
-from __future__ import annotations
-
 import uuid
 from datetime import datetime
 

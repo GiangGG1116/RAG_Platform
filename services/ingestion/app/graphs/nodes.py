@@ -4,9 +4,6 @@ LangGraph node implementations for the Ingestion pipeline.
 Each node receives the pipeline state, performs its work, and returns
 updated state fields.
 """
-
-from __future__ import annotations
-
 import logging
 from typing import Any
 

@@ -3,9 +3,6 @@ Redis caching layer with TTL support and cache invalidation.
 
 Provides async Redis client wrapper for the RAG platform.
 """
-
-from __future__ import annotations
-
 import json
 import logging
 from typing import Any

@@ -1,7 +1,4 @@
 """SQLAlchemy declarative base with common mixins."""
-
-from __future__ import annotations
-
 import uuid
 from datetime import datetime, timezone
 

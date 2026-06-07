@@ -2,12 +2,76 @@
 
 Production-grade Retrieval-Augmented Generation (RAG) platform built with microservice architecture.
 
-## 🏗️ Architecture
+## Architecture
 
-```
-Client → API Gateway → Ingestion Service  → RabbitMQ → Worker (Embeddings)
-                     → Retrieval Service  → PostgreSQL (pgvector)
-                     → LLM Service        → OpenAI / Local Model
+```mermaid
+flowchart TB
+    %% Actors
+    User(("User / Client App"))
+    
+    %% Edge Layer
+    subgraph Edge ["Edge Layer"]
+        Gateway{"API Gateway\n(:8000)"}
+        RedisAuth[("Redis\n(Rate Limiting & Auth)")]
+        Gateway -. "Check Limits" .-> RedisAuth
+    end
+    
+    %% Microservices Layer
+    subgraph Services ["Core Microservices"]
+        Ingestion["Ingestion Service\n(:8001)\nLangGraph: Chunking"]
+        Retrieval["Retrieval Service\n(:8002)\nLangGraph: RAG Logic"]
+        LLM["LLM Service\n(:8003)\nOrchestrator"]
+        Worker["Embedding Worker\n(Background Async)"]
+    end
+    
+    %% Data Layer
+    subgraph Data ["Data & Infrastructure"]
+        Postgres[("PostgreSQL\n(pgvector)")]
+        RabbitMQ[("RabbitMQ\n(Message Broker)")]
+        RedisMem[("Redis\n(Chat Memory)")]
+    end
+    
+    %% External
+    subgraph External ["External Providers"]
+        OpenAI("OpenAI API\nLocal LLMs")
+    end
+    
+    %% Connections
+    User == "REST / HTTP" ==> Gateway
+    
+    %% Gateway to Services
+    Gateway == "POST /documents" ==> Ingestion
+    Gateway == "POST /query" ==> Retrieval
+    
+    %% Ingestion Flow
+    Ingestion -- "1. Publish Document" --> RabbitMQ
+    RabbitMQ -. "2. Async Consume" .-> Worker
+    Worker -- "3. Request Embeddings" --> LLM
+    Worker -- "4. Store Vectors" --> Postgres
+    
+    %% Retrieval Flow
+    Retrieval -- "1. Load Chat History" --> RedisMem
+    Retrieval -- "2. Embed Query" --> LLM
+    Retrieval -- "3. Vector Search (Top-K)" --> Postgres
+    Retrieval -- "4. Generate Final Answer" --> LLM
+    
+    %% LLM Outbound
+    LLM -. "API Calls" .-> OpenAI
+    
+    %% Styles
+    classDef user fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b
+    classDef gateway fill:#ffe0b2,stroke:#f57c00,stroke-width:2px,color:#e65100
+    classDef svc fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20
+    classDef worker fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#880e4f
+    classDef db fill:#ede7f6,stroke:#5e35b1,stroke-width:2px,color:#311b92
+    classDef ext fill:#eceff1,stroke:#607d8b,stroke-width:2px,color:#263238,stroke-dasharray: 5 5
+    
+    class User user;
+    class Gateway gateway;
+    class Ingestion,Retrieval,LLM svc;
+    class Worker worker;
+    class Postgres,RabbitMQ,RedisAuth,RedisMem db;
+    class OpenAI ext;
 ```
 
 | Service               | Port | Description                                        |
@@ -16,22 +80,10 @@ Client → API Gateway → Ingestion Service  → RabbitMQ → Worker (Embedding
 | **Ingestion**   | 8001 | Document upload, chunking (LangGraph pipeline)     |
 | **Retrieval**   | 8002 | Hybrid search, RAG generation (LangGraph pipeline) |
 | **LLM Service** | 8003 | LLM orchestration (OpenAI / Local)                 |
-|                       |      |                                                    |
-|                       |      |                                                    |
 | **Worker**      | —   | Async embedding generation via RabbitMQ            |
 
-## 🛠️ Tech Stack
 
-- **Framework**: FastAPI + Pydantic V2
-- **Orchestration**: LangGraph (StateGraph pipelines)
-- **Database**: PostgreSQL 16 + pgvector (HNSW index)
-- **Cache**: Redis 7
-- **Message Broker**: RabbitMQ 3.13
-- **Observability**: OpenTelemetry + Prometheus + Grafana + Loki + structlog
-- **Containerization**: Docker + Docker Compose
-- **Orchestration**: Kubernetes (Deployments, StatefulSets, HPA)
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -41,7 +93,7 @@ Client → API Gateway → Ingestion Service  → RabbitMQ → Worker (Embedding
 ### 1. Clone & Configure
 
 ```bash
-cd rag_micro_2
+cd rag_micro
 cp .env.example .env
 # Edit .env with your OPENAI_API_KEY (or use LLM_PROVIDER=local)
 ```
@@ -92,7 +144,7 @@ curl -X POST http://localhost:8000/api/v1/query \
   }'
 ```
 
-## 📊 Observability
+## Observability
 
 | Tool                | URL                    | Credentials                    |
 | ------------------- | ---------------------- | ------------------------------ |
@@ -100,33 +152,14 @@ curl -X POST http://localhost:8000/api/v1/query \
 | Prometheus          | http://localhost:9090  | —                             |
 | RabbitMQ Management | http://localhost:15672 | rag_user / rag_secret_password |
 
-## 🔑 Key Features
+## Key Features
 
 ### LangGraph Pipelines
 
 - **Ingestion Pipeline**: `validate → extract → chunk → publish → update_status`
 - **RAG Pipeline**: `analyze_query → retrieve → rerank → generate → cite`
 
-### Production Features
-
-- ✅ API Key authentication
-- ✅ Redis-based rate limiting (sliding window)
-- ✅ Async document processing via RabbitMQ
-- ✅ Content deduplication (SHA-256 hash)
-- ✅ Hybrid retrieval (vector + keyword search)
-- ✅ Cross-encoder reranking
-- ✅ Citation extraction & verification
-- ✅ Multi-tenant support
-- ✅ Structured logging (structlog + JSON)
-- ✅ Distributed tracing (OpenTelemetry)
-- ✅ Prometheus metrics
-- ✅ Health/readiness probes
-- ✅ Graceful shutdown
-- ✅ Dead-letter queues
-- ✅ Connection pooling
-- ✅ HPA autoscaling (K8s)
-
-## 🐳 Kubernetes Deployment
+## Kubernetes Deployment
 
 ```bash
 # Apply all manifests
@@ -136,7 +169,7 @@ make k8s-apply
 make k8s-delete
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
 make test          # All tests
@@ -145,11 +178,3 @@ make lint          # Ruff linter
 make format        # Ruff formatter
 ```
 
-## 📝 API Documentation
-
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-## License
-
-MIT

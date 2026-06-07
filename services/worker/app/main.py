@@ -29,6 +29,19 @@ def _signal_handler() -> None:
     _shutdown_event.set()
 
 
+async def _heartbeat_loop() -> None:
+    """Touch a heartbeat file periodically to indicate the worker is alive."""
+    import os
+    heartbeat_path = "/tmp/worker_heartbeat"
+    while not _shutdown_event.is_set():
+        try:
+            with open(heartbeat_path, "w") as f:
+                f.write(str(asyncio.get_running_loop().time()))
+        except Exception:
+            logger.exception("Failed to write worker heartbeat")
+        await asyncio.sleep(15)
+
+
 async def main() -> None:
     """Start the worker service."""
     setup_observability("worker-service")
@@ -51,6 +64,9 @@ async def main() -> None:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, _signal_handler)
 
+    # Start heartbeat task
+    heartbeat_task = asyncio.create_task(_heartbeat_loop())
+
     # Start consumers
     logger.info("Starting embedding consumer...")
     consumer_task = asyncio.create_task(embedding_consumer.start())
@@ -60,6 +76,7 @@ async def main() -> None:
 
     # Graceful shutdown
     logger.info("Shutting down worker service...")
+    heartbeat_task.cancel()
     await embedding_consumer.stop()
     consumer_task.cancel()
 

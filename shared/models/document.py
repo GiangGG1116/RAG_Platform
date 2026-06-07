@@ -1,7 +1,4 @@
 """Document SQLAlchemy model."""
-
-from __future__ import annotations
-
 import enum
 import uuid
 

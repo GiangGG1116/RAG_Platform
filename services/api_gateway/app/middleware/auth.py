@@ -1,7 +1,4 @@
 """API Authentication middleware — supports both JWT Bearer and legacy API Key."""
-
-from __future__ import annotations
-
 import logging
 
 from fastapi import HTTPException, Request, Security, status

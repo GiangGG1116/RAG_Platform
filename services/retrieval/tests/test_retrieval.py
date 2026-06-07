@@ -1,7 +1,5 @@
 """Integration tests for Retrieval service — query analysis, SQL safety, and reranking."""
 
-from __future__ import annotations
-
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 

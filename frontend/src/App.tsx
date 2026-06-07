@@ -7,9 +7,24 @@ import { ChatInterface } from './components/ChatInterface';
 function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'documents'>('chat');
   const [settings, setSettings] = useState<AppSettings>({
-    apiUrl: window.location.origin === 'http://localhost:3000' 
-      ? 'http://localhost:8000' 
-      : `${window.location.protocol}//${window.location.hostname}:8000`,
+    apiUrl: (() => {
+      // 1. Local development (standard docker-compose / dev server)
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return window.location.origin === 'http://localhost:3000' 
+          ? 'http://localhost:8000' 
+          : `${window.location.protocol}//${window.location.hostname}:8000`;
+      }
+      // 2. Kubernetes Ingress (using domain names)
+      if (window.location.hostname === 'rag-app.example.com') {
+        return `${window.location.protocol}//rag-api.example.com`;
+      }
+      // 3. Minikube NodePort fallback (Frontend is 30659, API Gateway is 30199)
+      if (window.location.port === '30659') {
+        return `${window.location.protocol}//${window.location.hostname}:30199`;
+      }
+      // 4. Default fallback
+      return `${window.location.protocol}//${window.location.hostname}:8000`;
+    })(),
     apiKey: 'default-api-key-change-me',
     tenantId: 'default',
     topK: 5,

@@ -1,0 +1,18 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.componentLabels" (dict "component" "frontend" "context" .) | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "rag-platform.selectorLabels" (dict "component" "frontend") | nindent 4 }}
+{{- end }}

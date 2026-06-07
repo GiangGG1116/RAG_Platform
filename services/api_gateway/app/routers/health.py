@@ -1,7 +1,4 @@
 """Health check endpoints for liveness and readiness probes."""
-
-from __future__ import annotations
-
 import time
 
 from fastapi import APIRouter, Request

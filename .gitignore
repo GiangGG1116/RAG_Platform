@@ -54,4 +54,5 @@ coverage.xml
 # Alembic
 migrations/versions/__pycache__/
 
-
+helm/rag-platform/values.yaml
+helm/rag-platform/secrets.yaml

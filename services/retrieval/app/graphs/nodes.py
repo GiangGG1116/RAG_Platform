@@ -116,7 +116,7 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
                     WHERE d.tenant_id = :tenant_id
                       AND ({keyword_conditions})
                     LIMIT :top_k
-                """)
+                """)  # noqa: S608
                 params = {"tenant_id": tenant_id, "top_k": top_k}
                 for i, kw in enumerate(safe_keywords):
                     params[f"kw_{i}"] = f"%{kw}%"

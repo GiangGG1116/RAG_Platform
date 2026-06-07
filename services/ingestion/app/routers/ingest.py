@@ -70,7 +70,11 @@ async def _run_pipeline_safe(
     except BaseException as e:
         import asyncio
         is_cancelled = isinstance(e, asyncio.CancelledError)
-        error_msg = "Ingestion pipeline cancelled (system shutdown)" if is_cancelled else str(e) or "Ingestion pipeline failed"
+        error_msg = (
+            "Ingestion pipeline cancelled (system shutdown)"
+            if is_cancelled
+            else str(e) or "Ingestion pipeline failed"
+        )
 
         logger.exception("Ingestion pipeline error for document %s: %s", doc_id, error_msg)
 

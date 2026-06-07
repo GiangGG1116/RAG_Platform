@@ -40,7 +40,7 @@ class TokenResponse(BaseModel):
     """Response returned when creating a token."""
 
     access_token: str
-    token_type: str = "bearer"
+    token_type: str = "bearer"  # noqa: S105
     expires_in: int
     role: str
 
@@ -96,10 +96,10 @@ def verify_token(token: str) -> TokenData:
             tenant_id=payload.get("tenant_id", "default"),
             exp=datetime.fromtimestamp(payload["exp"], tz=UTC),
         )
-    except jwt.ExpiredSignatureError:
-        raise ValueError("Token has expired")
+    except jwt.ExpiredSignatureError as e:
+        raise ValueError("Token has expired") from e
     except jwt.InvalidTokenError as e:
-        raise ValueError(f"Invalid token: {e}")
+        raise ValueError(f"Invalid token: {e}") from e
 
 
 # ── RBAC Permission Check ────────────────────────────────

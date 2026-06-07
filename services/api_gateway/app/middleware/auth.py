@@ -18,8 +18,8 @@ SKIP_AUTH_PATHS = frozenset({"/health", "/ready", "/docs", "/redoc", "/openapi.j
 
 async def verify_api_key(
     request: Request,
-    api_key: str | None = Security(api_key_header),
-    bearer: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+    api_key: str | None = Security(api_key_header),  # noqa: B008
+    bearer: HTTPAuthorizationCredentials | None = Security(bearer_scheme),  # noqa: B008
 ) -> TokenData:
     """Verify authentication via JWT Bearer token or legacy API Key.
 
@@ -41,13 +41,17 @@ async def verify_api_key(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=str(e),
                 headers={"WWW-Authenticate": "Bearer"},
-            )
+            ) from e
 
         # RBAC permission check
         if not check_permission(token_data.role, request.method, request.url.path):
+            detail_msg = (
+                f"Role '{token_data.role.value}' does not have permission "
+                f"for {request.method} {request.url.path}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Role '{token_data.role.value}' does not have permission for {request.method} {request.url.path}",
+                detail=detail_msg,
             )
 
         # Store user info on request state for downstream use

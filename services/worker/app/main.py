@@ -29,7 +29,7 @@ def _signal_handler() -> None:
 
 async def _heartbeat_loop() -> None:
     """Touch a heartbeat file periodically to indicate the worker is alive."""
-    heartbeat_path = "/tmp/worker_heartbeat"
+    heartbeat_path = "/tmp/worker_heartbeat"  # noqa: S108
     while not _shutdown_event.is_set():
         try:
             with open(heartbeat_path, "w") as f:

@@ -5,6 +5,7 @@ Call `setup_observability(service_name)` during app startup to configure
 tracing, metrics, and structured logging for any microservice.
 """
 import logging
+import re
 import sys
 from typing import Any
 
@@ -54,8 +55,6 @@ def setup_metrics(service_name: str) -> MeterProvider:
 
 
 # ── PII Masking ──────────────────────────────────────────
-import re
-
 _PII_PATTERNS = [
     (re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"), "[EMAIL_REDACTED]"),
     (re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b"), "[PHONE_REDACTED]"),

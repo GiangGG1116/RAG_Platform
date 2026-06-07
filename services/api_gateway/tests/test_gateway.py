@@ -17,7 +17,7 @@ class TestJWTAuth:
             tenant_id="company-a",
         )
         assert token_resp.access_token
-        assert token_resp.token_type == "bearer"
+        assert token_resp.token_type == "bearer"  # noqa: S105
         assert token_resp.role == "editor"
         assert token_resp.expires_in > 0
 
@@ -119,9 +119,11 @@ class TestDocumentSchemas:
         assert doc.tenant_id == "default"
 
     def test_document_create_empty_title_fails(self):
+        from pydantic import ValidationError
+
         from shared.schemas.document import DocumentCreate
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             DocumentCreate(title="", content="Some content")
 
 

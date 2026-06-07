@@ -44,7 +44,13 @@ class OpenAIProvider(BaseLLMProvider):
                     json={
                         "model": self._settings.openai_model,
                         "messages": [
-                            {"role": "system", "content": "You are a helpful assistant that answers questions based on provided context. Always cite sources when available."},
+                            {
+                                "role": "system",
+                                "content": (
+                                    "You are a helpful assistant that answers questions "
+                                    "based on provided context. Always cite sources when available."
+                                ),
+                            },
                             {"role": "user", "content": prompt},
                         ],
                         "max_tokens": max_tokens,
@@ -175,7 +181,13 @@ class OpenAIProvider(BaseLLMProvider):
                     json={
                         "model": self._settings.openai_model,
                         "messages": [
-                            {"role": "system", "content": "Rate the relevance of the passage to the query on a scale of 0 to 1. Only respond with a number."},
+                            {
+                                "role": "system",
+                                "content": (
+                                    "Rate the relevance of the passage to the query "
+                                    "on a scale of 0 to 1. Only respond with a number."
+                                ),
+                            },
                             {"role": "user", "content": f"Query: {query}\n\nPassage: {passage[:500]}"},
                         ],
                         "max_tokens": 5,

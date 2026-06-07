@@ -6,16 +6,14 @@ generation, and citation extraction.
 """
 import json
 import logging
-import uuid
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import text
 
 from shared.cache import get_cache
 from shared.config import get_settings
 from shared.database import get_db_session
-from shared.models.chunk import Chunk
-from shared.models.document import Document
 from shared.utils import build_cache_key
 
 logger = logging.getLogger(__name__)

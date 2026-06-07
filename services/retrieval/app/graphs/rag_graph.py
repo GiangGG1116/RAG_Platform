@@ -9,7 +9,8 @@ import json
 import logging
 import time
 import uuid
-from typing import Any, AsyncIterator, TypedDict
+from collections.abc import AsyncIterator
+from typing import Any, TypedDict
 
 import httpx
 from langgraph.graph import END, StateGraph

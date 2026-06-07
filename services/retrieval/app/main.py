@@ -5,17 +5,16 @@ Handles RAG queries using LangGraph pipeline: query analysis,
 hybrid retrieval, reranking, LLM generation, and citation.
 """
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 import httpx
 from fastapi import FastAPI
 
+from app.routers import query
 from shared.cache import close_cache, get_cache
 from shared.database import dispose_engine
 from shared.observability import instrument_fastapi, setup_observability
-
-from app.routers import query
 
 logger = logging.getLogger(__name__)
 

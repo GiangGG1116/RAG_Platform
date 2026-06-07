@@ -5,17 +5,16 @@ Handles document upload, text extraction, chunking, and publishing
 chunks to RabbitMQ for async embedding generation.
 """
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
+from app.routers import ingest
 from shared.cache import close_cache, get_cache
 from shared.database import dispose_engine
 from shared.messaging import close_publisher, get_publisher
 from shared.observability import instrument_fastapi, setup_observability
-
-from app.routers import ingest
 
 logger = logging.getLogger(__name__)
 

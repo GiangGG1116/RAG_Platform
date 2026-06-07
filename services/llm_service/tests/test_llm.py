@@ -1,6 +1,6 @@
 """Tests for LLM service."""
+
 import pytest
-import asyncio
 
 
 class TestLocalProvider:

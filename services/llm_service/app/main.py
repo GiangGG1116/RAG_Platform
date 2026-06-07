@@ -5,15 +5,14 @@ Provides text generation, embedding, and reranking endpoints.
 Supports OpenAI and local LLM providers.
 """
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
-from shared.observability import instrument_fastapi, setup_observability
-
 from app.providers import get_llm_provider
 from app.routers import generate
+from shared.observability import instrument_fastapi, setup_observability
 
 logger = logging.getLogger(__name__)
 

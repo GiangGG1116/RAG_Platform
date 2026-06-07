@@ -1,8 +1,7 @@
 """Integration tests for Ingestion service — validation, chunking, and dedup."""
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
-from shared.config import get_settings
+import pytest
 
 
 class TestIngestionValidation:
@@ -13,14 +12,14 @@ class TestIngestionValidation:
         from services.ingestion.app.graphs.nodes import validate_document_node
 
         state = {"content": "", "document_id": "test-id"}
-        with patch("services.ingestion.app.graphs.nodes.get_cache", new_callable=AsyncMock) as mock_cache:
+        with patch("services.ingestion.app.graphs.nodes.get_cache", new_callable=AsyncMock):
             result = await validate_document_node(state)
             assert result["is_valid"] is False
             assert "empty" in result["error"]
 
     @pytest.mark.asyncio
     async def test_validate_oversized_content_fails(self):
-        from services.ingestion.app.graphs.nodes import validate_document_node, MAX_CONTENT_LENGTH
+        from services.ingestion.app.graphs.nodes import MAX_CONTENT_LENGTH, validate_document_node
 
         state = {"content": "x" * (MAX_CONTENT_LENGTH + 1), "document_id": "test-id"}
         with patch("services.ingestion.app.graphs.nodes.get_cache", new_callable=AsyncMock) as mock_cache:

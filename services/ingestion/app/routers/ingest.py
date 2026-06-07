@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import func, select
 
+from app.graphs.ingestion_graph import run_ingestion_pipeline
 from shared.database import get_db_session
 from shared.models.document import Document, DocumentStatus
 from shared.schemas.document import (
@@ -15,8 +16,6 @@ from shared.schemas.document import (
     DocumentResponse,
     DocumentStatusResponse,
 )
-
-from app.graphs.ingestion_graph import run_ingestion_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -72,9 +71,9 @@ async def _run_pipeline_safe(
         import asyncio
         is_cancelled = isinstance(e, asyncio.CancelledError)
         error_msg = "Ingestion pipeline cancelled (system shutdown)" if is_cancelled else str(e) or "Ingestion pipeline failed"
-        
+
         logger.exception("Ingestion pipeline error for document %s: %s", doc_id, error_msg)
-        
+
         # Update document status to FAILED
         try:
             async with get_db_session() as session:
@@ -84,7 +83,7 @@ async def _run_pipeline_safe(
                     doc.error_message = error_msg
         except Exception as db_err:
             logger.error("Could not update document status to failed: %s", db_err)
-            
+
         if is_cancelled:
             raise
 

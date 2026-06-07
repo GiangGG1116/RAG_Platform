@@ -3,14 +3,14 @@ RabbitMQ async messaging layer using aio-pika.
 
 Provides publisher/consumer with retry, dead-letter, and graceful shutdown.
 """
-import asyncio
 import json
 import logging
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import aio_pika
 from aio_pika import ExchangeType, Message
-from aio_pika.abc import AbstractConnection, AbstractChannel, AbstractQueue
+from aio_pika.abc import AbstractChannel, AbstractConnection, AbstractQueue
 
 from shared.config import get_settings
 

@@ -13,7 +13,7 @@ import math
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,13 +22,12 @@ from shared.database import get_db_session
 from shared.models.conversation import ChatMessage, Conversation
 from shared.schemas.conversation import (
     BulkMessageCreate,
+    ChatMessageResponse,
     ConversationCreate,
     ConversationListResponse,
     ConversationResponse,
     ConversationSummary,
     ConversationUpdate,
-    MessageCreate,
-    ChatMessageResponse,
 )
 
 logger = logging.getLogger(__name__)

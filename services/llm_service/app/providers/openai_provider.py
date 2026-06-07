@@ -2,13 +2,13 @@
 import asyncio
 import json
 import logging
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 import httpx
 
-from shared.config import get_settings
-
 from app.providers.base import BaseLLMProvider
+from shared.config import get_settings
 
 logger = logging.getLogger(__name__)
 

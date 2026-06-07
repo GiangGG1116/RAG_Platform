@@ -1,7 +1,8 @@
 """LLM generation, embedding, and reranking endpoints."""
 import json
 import logging
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse

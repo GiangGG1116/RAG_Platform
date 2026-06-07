@@ -6,9 +6,8 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from shared.schemas.query import QueryRequest, QueryResponse
-
 from app.graphs.rag_graph import run_rag_pipeline, stream_rag_pipeline
+from shared.schemas.query import QueryRequest, QueryResponse
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ router = APIRouter()
 
 @router.post(
     "/query",
-    response_model=QueryResponse, 
+    response_model=QueryResponse,
     summary="Execute RAG query",
 )
 async def execute_query(

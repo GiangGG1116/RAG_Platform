@@ -1,15 +1,14 @@
 """Document SQLAlchemy model."""
 import enum
-import uuid
 
 from sqlalchemy import Enum, Index, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.models.base import Base
 
 
-class DocumentStatus(str, enum.Enum):
+class DocumentStatus(enum.StrEnum):
     """Document processing status."""
 
     PENDING = "pending"

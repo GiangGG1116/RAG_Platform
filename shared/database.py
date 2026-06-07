@@ -3,8 +3,8 @@ Async SQLAlchemy database engine and session management.
 
 Provides connection pooling with health checks for production use.
 """
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,

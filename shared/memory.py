@@ -6,7 +6,6 @@ configurable max turns and TTL for automatic expiration.
 """
 import json
 import logging
-from typing import Any
 
 from shared.cache import get_cache
 from shared.config import get_settings

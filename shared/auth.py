@@ -5,8 +5,8 @@ Provides token creation, verification, and role-based authorization
 for the API Gateway. Supports both JWT Bearer tokens and legacy API Keys.
 """
 import logging
-from datetime import datetime, timedelta, timezone
-from enum import Enum
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from typing import Any
 
 import jwt
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 # ── Roles ────────────────────────────────────────────────
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     """Available user roles for RBAC."""
 
     ADMIN = "admin"       # Full access: CRUD + manage users
@@ -54,7 +54,7 @@ def create_access_token(
 ) -> TokenResponse:
     """Create a signed JWT access token."""
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = datetime.now(UTC) + timedelta(
         minutes=settings.jwt_access_token_expire_minutes
     )
 
@@ -63,7 +63,7 @@ def create_access_token(
         "role": role.value,
         "tenant_id": tenant_id,
         "exp": expire,
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
     }
     if extra_claims:
         payload.update(extra_claims)
@@ -94,7 +94,7 @@ def verify_token(token: str) -> TokenData:
             sub=payload["sub"],
             role=UserRole(payload.get("role", "viewer")),
             tenant_id=payload.get("tenant_id", "default"),
-            exp=datetime.fromtimestamp(payload["exp"], tz=timezone.utc),
+            exp=datetime.fromtimestamp(payload["exp"], tz=UTC),
         )
     except jwt.ExpiredSignatureError:
         raise ValueError("Token has expired")

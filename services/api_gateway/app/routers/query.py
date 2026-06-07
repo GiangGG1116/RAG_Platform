@@ -1,6 +1,7 @@
 """Query/RAG endpoints - proxy to Retrieval service."""
 import logging
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse

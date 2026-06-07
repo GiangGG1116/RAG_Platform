@@ -8,14 +8,12 @@ Consumes messages from RabbitMQ queues and processes them:
 import asyncio
 import logging
 import signal
-import sys
-
-from shared.cache import close_cache, get_cache
-from shared.database import dispose_engine
-from shared.messaging import RabbitMQConsumer, QUEUE_EMBEDDING_GENERATE, ROUTING_KEY_EMBEDDING
-from shared.observability import setup_observability
 
 from app.consumers.embedding_consumer import handle_embedding_message
+from shared.cache import close_cache, get_cache
+from shared.database import dispose_engine
+from shared.messaging import QUEUE_EMBEDDING_GENERATE, ROUTING_KEY_EMBEDDING, RabbitMQConsumer
+from shared.observability import setup_observability
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +29,6 @@ def _signal_handler() -> None:
 
 async def _heartbeat_loop() -> None:
     """Touch a heartbeat file periodically to indicate the worker is alive."""
-    import os
     heartbeat_path = "/tmp/worker_heartbeat"
     while not _shutdown_event.is_set():
         try:

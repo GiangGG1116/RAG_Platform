@@ -1,7 +1,8 @@
 """Integration tests for Retrieval service — query analysis, SQL safety, and reranking."""
 
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 
 class TestQueryAnalysis:
@@ -36,6 +37,7 @@ class TestSQLInjectionPrevention:
     def test_keyword_search_uses_parameterized_queries(self):
         """Ensure the keyword search code does NOT use f-string interpolation for SQL."""
         import inspect
+
         from services.retrieval.app.graphs.nodes import retrieve_node
 
         source = inspect.getsource(retrieve_node)

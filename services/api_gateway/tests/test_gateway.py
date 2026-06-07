@@ -1,6 +1,8 @@
 """Integration tests for API Gateway — auth, rate limiting, and proxying."""
+
+from datetime import UTC
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from shared.auth import UserRole, create_access_token, verify_token
 
@@ -26,16 +28,18 @@ class TestJWTAuth:
         assert data.role == UserRole.ADMIN
 
     def test_verify_expired_token_raises(self):
+        from datetime import datetime, timedelta
+
         import jwt as pyjwt
-        from datetime import datetime, timedelta, timezone
+
         from shared.config import get_settings
 
         settings = get_settings()
         payload = {
             "sub": "expired_user",
             "role": "viewer",
-            "exp": datetime.now(timezone.utc) - timedelta(hours=1),
-            "iat": datetime.now(timezone.utc) - timedelta(hours=2),
+            "exp": datetime.now(UTC) - timedelta(hours=1),
+            "iat": datetime.now(UTC) - timedelta(hours=2),
         }
         token = pyjwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 

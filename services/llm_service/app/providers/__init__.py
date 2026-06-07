@@ -6,11 +6,10 @@ Supports OpenAI and local model providers with a common interface.
 
 from __future__ import annotations
 
-from shared.config import get_settings
-
 from app.providers.base import BaseLLMProvider
-from app.providers.openai_provider import OpenAIProvider
 from app.providers.local_provider import LocalProvider
+from app.providers.openai_provider import OpenAIProvider
+from shared.config import get_settings
 
 
 def get_llm_provider() -> BaseLLMProvider:

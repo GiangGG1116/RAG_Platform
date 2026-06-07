@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 import os
+import sys
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared.database import get_db_session
 from shared.models.document import Document, DocumentStatus
-
 
 SAMPLE_DOCUMENTS = [
     {
@@ -64,7 +63,6 @@ async def seed() -> None:
                 tenant_id="default",
             )
             session.add(doc)
-        print(f"Seeded {len(SAMPLE_DOCUMENTS)} sample documents.")
 
 
 if __name__ == "__main__":

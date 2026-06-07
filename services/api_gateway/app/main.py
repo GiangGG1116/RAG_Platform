@@ -5,22 +5,20 @@ Central entry point that proxies requests to internal microservices,
 handles authentication, rate limiting, CORS, and observability.
 """
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.routers import admin, conversations, documents, health, query
 from shared.cache import close_cache, get_cache
 from shared.config import get_settings
-from shared.database import async_session_factory, dispose_engine, engine
+from shared.database import dispose_engine, engine
 from shared.models import Base
 from shared.observability import instrument_fastapi, setup_observability
-
-from app.middleware.rate_limit import RateLimitMiddleware
-from app.routers import admin, documents, health, query
-from app.routers import conversations
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +33,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("API Gateway starting up...")
 
     # Initialize Redis cache for rate limiting
-    cache = await get_cache()
+    await get_cache()
     logger.info("Redis cache connected")
 
     # Ensure conversation tables exist (idempotent DDL)

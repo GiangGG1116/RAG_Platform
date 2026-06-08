@@ -1,4 +1,5 @@
 """Abstract base class for LLM providers."""
+
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from typing import Any
@@ -64,9 +65,7 @@ class BaseLLMProvider(ABC):
         ...
 
     @abstractmethod
-    async def rerank(
-        self, query: str, passages: list[str]
-    ) -> dict[str, Any]:
+    async def rerank(self, query: str, passages: list[str]) -> dict[str, Any]:
         """Rerank passages against a query.
 
         Returns:

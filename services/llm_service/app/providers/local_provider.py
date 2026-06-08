@@ -1,4 +1,5 @@
 """Local/mock LLM provider for development and testing."""
+
 import asyncio
 import logging
 import random
@@ -72,9 +73,7 @@ class LocalProvider(BaseLLMProvider):
             "dimension": dimension,
         }
 
-    async def rerank(
-        self, query: str, passages: list[str]
-    ) -> dict[str, Any]:
+    async def rerank(self, query: str, passages: list[str]) -> dict[str, Any]:
         """Return mock reranking scores based on keyword overlap."""
         query_words = set(query.lower().split())
         scores: list[float] = []

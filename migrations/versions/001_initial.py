@@ -18,7 +18,7 @@ depends_on = None
 def upgrade() -> None:
     # Enable extensions
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
-    op.execute('CREATE EXTENSION IF NOT EXISTS pg_trgm')
+    op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
 
     # Documents table
     op.create_table(

@@ -1,4 +1,5 @@
 """Pydantic schemas for Conversation / Chat History endpoints."""
+
 import uuid
 from datetime import datetime
 from typing import Any

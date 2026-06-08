@@ -1,4 +1,5 @@
 """Pydantic schemas for Query / RAG endpoints."""
+
 import uuid
 from datetime import datetime
 
@@ -18,15 +19,17 @@ class QueryRequest(BaseModel):
         description="Conversation ID for multi-turn memory. Omit for stateless queries.",
     )
 
-    model_config = {"json_schema_extra": {
-        "example": {
-            "question": "What is the main purpose of the system?",
-            "tenant_id": "default",
-            "top_k": 5,
-            "rerank": True,
-            "conversation_id": "conv-abc-123",
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "question": "What is the main purpose of the system?",
+                "tenant_id": "default",
+                "top_k": 5,
+                "rerank": True,
+                "conversation_id": "conv-abc-123",
+            }
         }
-    }}
+    }
 
 
 class RetrievedChunk(BaseModel):

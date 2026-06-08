@@ -1,4 +1,5 @@
 """Integration tests for Ingestion service — validation, chunking, and dedup."""
+
 from unittest.mock import AsyncMock, patch
 
 import pytest

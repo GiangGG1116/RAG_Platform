@@ -1,4 +1,5 @@
 """SQLAlchemy declarative base with common mixins."""
+
 import uuid
 from datetime import datetime
 

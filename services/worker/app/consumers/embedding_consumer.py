@@ -4,6 +4,7 @@ Embedding consumer - processes chunks from RabbitMQ and generates embeddings.
 Receives chunk messages, calls the LLM service for embeddings,
 and stores the results in PostgreSQL via pgvector.
 """
+
 import logging
 from typing import Any
 

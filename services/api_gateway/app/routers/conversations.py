@@ -8,6 +8,7 @@ This router handles all CRUD for persistent chat history:
   DELETE /conversations/{id}       — delete conversation + messages
   POST /conversations/{id}/messages — append message(s)
 """
+
 import logging
 import math
 import uuid
@@ -40,9 +41,7 @@ router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 async def _get_or_404(session: AsyncSession, conv_id: uuid.UUID) -> Conversation:
     """Fetch conversation or raise 404."""
-    result = await session.execute(
-        select(Conversation).where(Conversation.id == conv_id)
-    )
+    result = await session.execute(select(Conversation).where(Conversation.id == conv_id))
     conv = result.scalar_one_or_none()
     if conv is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -100,9 +99,7 @@ async def list_conversations(
     async with get_db_session() as session:
         # Total count
         count_result = await session.execute(
-            select(func.count(Conversation.id)).where(
-                Conversation.tenant_id == tenant_id
-            )
+            select(func.count(Conversation.id)).where(Conversation.tenant_id == tenant_id)
         )
         total = count_result.scalar_one()
 

@@ -4,6 +4,7 @@ Centralized configuration using Pydantic Settings.
 All microservices import from this module to ensure consistent
 environment variable handling across the platform.
 """
+
 from functools import lru_cache
 from typing import Literal
 

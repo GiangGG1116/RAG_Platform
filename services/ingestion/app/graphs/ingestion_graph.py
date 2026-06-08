@@ -4,6 +4,7 @@ LangGraph Ingestion Pipeline.
 StateGraph: validate → extract → chunk → publish
 Orchestrates the document ingestion process with state tracking.
 """
+
 import logging
 from typing import TypedDict
 

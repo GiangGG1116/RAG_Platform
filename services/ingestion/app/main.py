@@ -4,6 +4,7 @@ Ingestion Service - Main FastAPI Application.
 Handles document upload, text extraction, chunking, and publishing
 chunks to RabbitMQ for async embedding generation.
 """
+
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager

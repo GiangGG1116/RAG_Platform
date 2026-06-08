@@ -1,4 +1,5 @@
 """Conversation and ChatMessage SQLAlchemy models."""
+
 from __future__ import annotations
 
 import uuid
@@ -29,9 +30,7 @@ class Conversation(Base):
         lazy="selectin",
     )
 
-    __table_args__ = (
-        Index("idx_conversations_tenant_updated", "tenant_id", "updated_at"),
-    )
+    __table_args__ = (Index("idx_conversations_tenant_updated", "tenant_id", "updated_at"),)
 
     def __repr__(self) -> str:
         return f"<Conversation(id={self.id}, title='{self.title}')>"
@@ -58,9 +57,7 @@ class ChatMessage(Base):
     # Relationship back to conversation
     conversation: Mapped[Conversation] = relationship("Conversation", back_populates="messages")
 
-    __table_args__ = (
-        Index("idx_chat_messages_conversation_position", "conversation_id", "position"),
-    )
+    __table_args__ = (Index("idx_chat_messages_conversation_position", "conversation_id", "position"),)
 
     def __repr__(self) -> str:
         return f"<ChatMessage(id={self.id}, role='{self.role}', conv={self.conversation_id})>"

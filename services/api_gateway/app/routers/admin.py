@@ -1,4 +1,5 @@
 """Admin endpoints — token management and system administration."""
+
 import logging
 from typing import Any
 

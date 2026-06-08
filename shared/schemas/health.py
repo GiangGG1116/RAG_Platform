@@ -1,4 +1,5 @@
 """Pydantic schemas for health check endpoints."""
+
 from pydantic import BaseModel, Field
 
 

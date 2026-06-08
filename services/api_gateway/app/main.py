@@ -4,6 +4,7 @@ API Gateway - Main FastAPI Application.
 Central entry point that proxies requests to internal microservices,
 handles authentication, rate limiting, CORS, and observability.
 """
+
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager

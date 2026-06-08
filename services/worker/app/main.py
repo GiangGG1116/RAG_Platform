@@ -5,6 +5,7 @@ Consumes messages from RabbitMQ queues and processes them:
 - Embedding generation for document chunks
 - Other async tasks
 """
+
 import asyncio
 import logging
 import signal

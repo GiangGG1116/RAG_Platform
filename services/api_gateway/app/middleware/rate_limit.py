@@ -3,6 +3,7 @@
 Rate limits by authenticated user identity (API Key / JWT subject),
 falling back to client IP for unauthenticated requests.
 """
+
 import logging
 
 from fastapi import Request, Response, status

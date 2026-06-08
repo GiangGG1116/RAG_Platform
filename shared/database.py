@@ -3,6 +3,7 @@ Async SQLAlchemy database engine and session management.
 
 Provides connection pooling with health checks for production use.
 """
+
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -26,12 +27,14 @@ def create_engine(pool_size: int = 20, max_overflow: int = 10, use_null_pool: bo
     if use_null_pool:
         kwargs["poolclass"] = NullPool
     else:
-        kwargs.update({
-            "pool_size": pool_size,
-            "max_overflow": max_overflow,
-            "pool_pre_ping": True,
-            "pool_recycle": 3600,
-        })
+        kwargs.update(
+            {
+                "pool_size": pool_size,
+                "max_overflow": max_overflow,
+                "pool_pre_ping": True,
+                "pool_recycle": 3600,
+            }
+        )
     return create_async_engine(settings.database_url, **kwargs)
 
 

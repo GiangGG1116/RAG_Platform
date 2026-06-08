@@ -4,6 +4,7 @@ LangGraph node implementations for the Ingestion pipeline.
 Each node receives the pipeline state, performs its work, and returns
 updated state fields.
 """
+
 import logging
 from typing import Any
 
@@ -68,6 +69,7 @@ async def extract_text_node(state: dict[str, Any]) -> dict[str, Any]:
     extracted = content.strip()
     # Remove excessive whitespace
     import re
+
     extracted = re.sub(r"\n{3,}", "\n\n", extracted)
     extracted = re.sub(r" {2,}", " ", extracted)
 
@@ -99,15 +101,17 @@ async def chunk_text_node(state: dict[str, Any]) -> dict[str, Any]:
 
     for sentence in sentences:
         if len(current_chunk) + len(sentence) > chunk_size and current_chunk:
-            chunks.append({
-                "content": current_chunk.strip(),
-                "chunk_index": chunk_index,
-                "token_count": len(current_chunk.split()),
-                "metadata": {
-                    "document_id": state["document_id"],
-                    "title": state["title"],
-                },
-            })
+            chunks.append(
+                {
+                    "content": current_chunk.strip(),
+                    "chunk_index": chunk_index,
+                    "token_count": len(current_chunk.split()),
+                    "metadata": {
+                        "document_id": state["document_id"],
+                        "title": state["title"],
+                    },
+                }
+            )
             chunk_index += 1
 
             # Keep overlap
@@ -119,15 +123,17 @@ async def chunk_text_node(state: dict[str, Any]) -> dict[str, Any]:
 
     # Add last chunk
     if current_chunk.strip():
-        chunks.append({
-            "content": current_chunk.strip(),
-            "chunk_index": chunk_index,
-            "token_count": len(current_chunk.split()),
-            "metadata": {
-                "document_id": state["document_id"],
-                "title": state["title"],
-            },
-        })
+        chunks.append(
+            {
+                "content": current_chunk.strip(),
+                "chunk_index": chunk_index,
+                "token_count": len(current_chunk.split()),
+                "metadata": {
+                    "document_id": state["document_id"],
+                    "title": state["title"],
+                },
+            }
+        )
 
     logger.info(
         "Document %s chunked into %d chunks (size=%d, overlap=%d)",
@@ -195,5 +201,6 @@ async def update_status_node(state: dict[str, Any]) -> dict[str, Any]:
 def _split_into_sentences(text: str) -> list[str]:
     """Simple sentence splitting."""
     import re
+
     sentences = re.split(r"(?<=[.!?])\s+", text)
     return [s.strip() for s in sentences if s.strip()]

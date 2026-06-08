@@ -1,4 +1,5 @@
 """Query/RAG endpoints - proxy to Retrieval service."""
+
 import logging
 from collections.abc import AsyncIterator
 from typing import Any
@@ -75,6 +76,7 @@ async def _proxy_stream(
         except Exception as e:
             logger.error("Streaming proxy failed: %s", e)
             import json
+
             yield f"event: error\ndata: {json.dumps({'detail': str(e)})}\n\n"
 
     return StreamingResponse(

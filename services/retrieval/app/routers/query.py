@@ -1,4 +1,5 @@
 """Query endpoint - triggers the LangGraph RAG pipeline."""
+
 import logging
 import time
 from typing import Any

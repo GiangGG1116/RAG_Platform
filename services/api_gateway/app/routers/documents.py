@@ -1,4 +1,5 @@
 """Document management endpoints - proxy to Ingestion service."""
+
 import logging
 from typing import Any
 from uuid import UUID
@@ -88,9 +89,7 @@ async def get_document(document_id: UUID, request: Request) -> Any:
     client = request.app.state.http_client
 
     try:
-        response = await client.get(
-            f"{settings.ingestion_service_url}/api/v1/documents/{document_id}"
-        )
+        response = await client.get(f"{settings.ingestion_service_url}/api/v1/documents/{document_id}")
         if response.status_code == 404:
             raise HTTPException(status_code=404, detail="Document not found")
         response.raise_for_status()
@@ -116,9 +115,7 @@ async def get_document_status(document_id: UUID, request: Request) -> Any:
     client = request.app.state.http_client
 
     try:
-        response = await client.get(
-            f"{settings.ingestion_service_url}/api/v1/documents/{document_id}/status"
-        )
+        response = await client.get(f"{settings.ingestion_service_url}/api/v1/documents/{document_id}/status")
         if response.status_code == 404:
             raise HTTPException(status_code=404, detail="Document not found")
         response.raise_for_status()
@@ -144,9 +141,7 @@ async def delete_document(document_id: UUID, request: Request) -> None:
     client = request.app.state.http_client
 
     try:
-        response = await client.delete(
-            f"{settings.ingestion_service_url}/api/v1/documents/{document_id}"
-        )
+        response = await client.delete(f"{settings.ingestion_service_url}/api/v1/documents/{document_id}")
         if response.status_code == 404:
             raise HTTPException(status_code=404, detail="Document not found")
         response.raise_for_status()

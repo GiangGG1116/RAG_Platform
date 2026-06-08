@@ -4,6 +4,7 @@ Observability setup: OpenTelemetry tracing, Prometheus metrics, structured loggi
 Call `setup_observability(service_name)` during app startup to configure
 tracing, metrics, and structured logging for any microservice.
 """
+
 import logging
 import re
 import sys
@@ -25,11 +26,13 @@ from shared.config import get_settings
 def setup_tracing(service_name: str) -> TracerProvider:
     """Configure OpenTelemetry tracing with OTLP exporter."""
     settings = get_settings()
-    resource = Resource.create({
-        "service.name": service_name,
-        "service.version": "1.0.0",
-        "deployment.environment": "production",
-    })
+    resource = Resource.create(
+        {
+            "service.name": service_name,
+            "service.version": "1.0.0",
+            "deployment.environment": "production",
+        }
+    )
 
     provider = TracerProvider(resource=resource)
     exporter = OTLPSpanExporter(endpoint=settings.otel_exporter_otlp_endpoint)
@@ -42,9 +45,11 @@ def setup_tracing(service_name: str) -> TracerProvider:
 def setup_metrics(service_name: str) -> MeterProvider:
     """Configure OpenTelemetry metrics with OTLP exporter."""
     settings = get_settings()
-    resource = Resource.create({
-        "service.name": service_name,
-    })
+    resource = Resource.create(
+        {
+            "service.name": service_name,
+        }
+    )
 
     exporter = OTLPMetricExporter(endpoint=settings.otel_exporter_otlp_endpoint)
     reader = PeriodicExportingMetricReader(exporter, export_interval_millis=30000)

@@ -1,4 +1,5 @@
 """Document SQLAlchemy model."""
+
 import enum
 
 from sqlalchemy import Enum, Index, String, Text
@@ -40,9 +41,7 @@ class Document(Base):
     # Relationships
     chunks = relationship("Chunk", back_populates="document", cascade="all, delete-orphan", lazy="selectin")
 
-    __table_args__ = (
-        Index("idx_documents_tenant_status", "tenant_id", "status"),
-    )
+    __table_args__ = (Index("idx_documents_tenant_status", "tenant_id", "status"),)
 
     def __repr__(self) -> str:
         return f"<Document(id={self.id}, title='{self.title}', status={self.status})>"

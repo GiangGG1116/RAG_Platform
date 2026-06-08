@@ -1,4 +1,5 @@
 """Health check endpoints for liveness and readiness probes."""
+
 import time
 
 from fastapi import APIRouter, Request
@@ -27,11 +28,13 @@ async def readiness_check(request: Request) -> HealthResponse:
         cache = await get_cache()
         is_healthy = await cache.health_check()
         latency = round((time.perf_counter() - start) * 1000, 2)
-        services.append(ServiceHealth(
-            name="redis",
-            status="healthy" if is_healthy else "unhealthy",
-            latency_ms=latency,
-        ))
+        services.append(
+            ServiceHealth(
+                name="redis",
+                status="healthy" if is_healthy else "unhealthy",
+                latency_ms=latency,
+            )
+        )
         if not is_healthy:
             overall_status = "degraded"
     except Exception as e:
@@ -51,11 +54,13 @@ async def readiness_check(request: Request) -> HealthResponse:
             start = time.perf_counter()
             resp = await http_client.get(f"{url}/health", timeout=5.0)
             latency = round((time.perf_counter() - start) * 1000, 2)
-            services.append(ServiceHealth(
-                name=name,
-                status="healthy" if resp.status_code == 200 else "unhealthy",
-                latency_ms=latency,
-            ))
+            services.append(
+                ServiceHealth(
+                    name=name,
+                    status="healthy" if resp.status_code == 200 else "unhealthy",
+                    latency_ms=latency,
+                )
+            )
         except Exception:
             services.append(ServiceHealth(name=name, status="unhealthy"))
             overall_status = "degraded"

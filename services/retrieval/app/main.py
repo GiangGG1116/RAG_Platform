@@ -4,6 +4,7 @@ Retrieval Service - Main FastAPI Application.
 Handles RAG queries using LangGraph pipeline: query analysis,
 hybrid retrieval, reranking, LLM generation, and citation.
 """
+
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager

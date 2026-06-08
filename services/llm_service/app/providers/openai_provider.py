@@ -1,4 +1,5 @@
 """OpenAI LLM provider with retry and rate limiting."""
+
 import asyncio
 import json
 import logging
@@ -67,7 +68,7 @@ class OpenAIProvider(BaseLLMProvider):
                 }
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429 and attempt < MAX_RETRIES - 1:
-                    delay = RETRY_DELAY * (2 ** attempt)
+                    delay = RETRY_DELAY * (2**attempt)
                     logger.warning("Rate limited, retrying in %.1fs", delay)
                     await asyncio.sleep(delay)
                     continue
@@ -113,7 +114,7 @@ class OpenAIProvider(BaseLLMProvider):
                 async for line in response.aiter_lines():
                     if not line or not line.startswith("data: "):
                         continue
-                    payload = line[len("data: "):]
+                    payload = line[len("data: ") :]
                     if payload.strip() == "[DONE]":
                         break
                     try:
@@ -153,7 +154,7 @@ class OpenAIProvider(BaseLLMProvider):
                 }
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429 and attempt < MAX_RETRIES - 1:
-                    await asyncio.sleep(RETRY_DELAY * (2 ** attempt))
+                    await asyncio.sleep(RETRY_DELAY * (2**attempt))
                     continue
                 raise
             except Exception:
@@ -164,9 +165,7 @@ class OpenAIProvider(BaseLLMProvider):
 
         raise RuntimeError("Embedding generation failed after retries")
 
-    async def rerank(
-        self, query: str, passages: list[str]
-    ) -> dict[str, Any]:
+    async def rerank(self, query: str, passages: list[str]) -> dict[str, Any]:
         """Rerank using LLM-based scoring.
 
         Uses the chat model to score relevance since OpenAI

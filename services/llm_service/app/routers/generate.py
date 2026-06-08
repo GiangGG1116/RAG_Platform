@@ -1,4 +1,5 @@
 """LLM generation, embedding, and reranking endpoints."""
+
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -66,9 +67,7 @@ async def generate_text(payload: GenerateRequest, request: Request) -> Any:
         )
 
 
-async def _stream_generate(
-    provider: Any, prompt: str, max_tokens: int, temperature: float
-) -> AsyncIterator[str]:
+async def _stream_generate(provider: Any, prompt: str, max_tokens: int, temperature: float) -> AsyncIterator[str]:
     """SSE generator that yields token events from the LLM provider."""
     try:
         async for chunk in provider.generate_stream(

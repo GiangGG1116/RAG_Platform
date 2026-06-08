@@ -4,6 +4,7 @@ LLM Service - Main FastAPI Application.
 Provides text generation, embedding, and reranking endpoints.
 Supports OpenAI and local LLM providers.
 """
+
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager

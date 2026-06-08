@@ -4,6 +4,7 @@ JWT Authentication with Role-Based Access Control (RBAC).
 Provides token creation, verification, and role-based authorization
 for the API Gateway. Supports both JWT Bearer tokens and legacy API Keys.
 """
+
 import logging
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
@@ -21,16 +22,16 @@ logger = logging.getLogger(__name__)
 class UserRole(StrEnum):
     """Available user roles for RBAC."""
 
-    ADMIN = "admin"       # Full access: CRUD + manage users
-    EDITOR = "editor"     # Can ingest, query, and delete own documents
-    VIEWER = "viewer"     # Can only query (read-only)
+    ADMIN = "admin"  # Full access: CRUD + manage users
+    EDITOR = "editor"  # Can ingest, query, and delete own documents
+    VIEWER = "viewer"  # Can only query (read-only)
 
 
 # ── Token Models ─────────────────────────────────────────
 class TokenData(BaseModel):
     """Data extracted from a verified JWT token."""
 
-    sub: str                        # User ID or username
+    sub: str  # User ID or username
     role: UserRole = UserRole.VIEWER
     tenant_id: str = "default"
     exp: datetime | None = None
@@ -54,9 +55,7 @@ def create_access_token(
 ) -> TokenResponse:
     """Create a signed JWT access token."""
     settings = get_settings()
-    expire = datetime.now(UTC) + timedelta(
-        minutes=settings.jwt_access_token_expire_minutes
-    )
+    expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_access_token_expire_minutes)
 
     payload = {
         "sub": subject,

@@ -4,6 +4,7 @@ LangGraph node implementations for the RAG pipeline.
 Each node performs one step: query analysis, retrieval, reranking,
 generation, and citation extraction.
 """
+
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -24,11 +25,7 @@ async def analyze_query_node(state: dict[str, Any]) -> dict[str, Any]:
     question = state["question"]
 
     # Simple keyword extraction (in production, use LLM for this)
-    keywords = [
-        word.lower().strip(".,!?;:")
-        for word in question.split()
-        if len(word) > 3
-    ]
+    keywords = [word.lower().strip(".,!?;:") for word in question.split() if len(word) > 3]
 
     analysis = {
         "original_query": question,
@@ -91,22 +88,22 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
                 {"embedding": embedding_str, "tenant_id": tenant_id, "top_k": top_k},
             )
             for row in result.mappings():
-                retrieved_chunks.append({
-                    "chunk_id": str(row["id"]),
-                    "document_id": str(row["document_id"]),
-                    "document_title": row["document_title"],
-                    "content": row["content"],
-                    "score": float(row["similarity_score"]),
-                    "metadata": row["metadata"] or {},
-                })
+                retrieved_chunks.append(
+                    {
+                        "chunk_id": str(row["id"]),
+                        "document_id": str(row["document_id"]),
+                        "document_title": row["document_title"],
+                        "content": row["content"],
+                        "score": float(row["similarity_score"]),
+                        "metadata": row["metadata"] or {},
+                    }
+                )
         else:
             # Fallback: keyword search with ILIKE (parameterized to prevent SQL injection)
             keywords = state.get("query_analysis", {}).get("keywords", [])
             if keywords:
                 safe_keywords = keywords[:5]
-                keyword_conditions = " OR ".join(
-                    [f"c.content ILIKE :kw_{i}" for i in range(len(safe_keywords))]
-                )
+                keyword_conditions = " OR ".join([f"c.content ILIKE :kw_{i}" for i in range(len(safe_keywords))])
                 keyword_query = text(f"""
                     SELECT c.id, c.document_id, c.content, c.chunk_index, c.metadata,
                            d.title as document_title,
@@ -122,14 +119,16 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
                     params[f"kw_{i}"] = f"%{kw}%"
                 result = await session.execute(keyword_query, params)
                 for row in result.mappings():
-                    retrieved_chunks.append({
-                        "chunk_id": str(row["id"]),
-                        "document_id": str(row["document_id"]),
-                        "document_title": row["document_title"],
-                        "content": row["content"],
-                        "score": float(row["similarity_score"]),
-                        "metadata": row["metadata"] or {},
-                    })
+                    retrieved_chunks.append(
+                        {
+                            "chunk_id": str(row["id"]),
+                            "document_id": str(row["document_id"]),
+                            "document_title": row["document_title"],
+                            "content": row["content"],
+                            "score": float(row["similarity_score"]),
+                            "metadata": row["metadata"] or {},
+                        }
+                    )
 
     # Cache results
     if retrieved_chunks:
@@ -191,9 +190,7 @@ async def generate_node(state: dict[str, Any]) -> dict[str, Any]:
     # Build context from chunks
     context_parts = []
     for i, chunk in enumerate(chunks[:5]):
-        context_parts.append(
-            f"[Source {i + 1}: {chunk['document_title']}]\n{chunk['content']}"
-        )
+        context_parts.append(f"[Source {i + 1}: {chunk['document_title']}]\n{chunk['content']}")
     context = "\n\n---\n\n".join(context_parts)
 
     # Call LLM service
@@ -247,13 +244,15 @@ async def cite_node(state: dict[str, Any]) -> dict[str, Any]:
         relevance = 0.9 - (i * 0.1)  # Higher relevance for top-ranked
 
         if source_ref in answer or i < 3:  # Always cite top 3
-            citations.append({
-                "document_id": chunk["document_id"],
-                "document_title": chunk["document_title"],
-                "chunk_id": chunk["chunk_id"],
-                "relevance_score": max(relevance, 0.1),
-                "excerpt": chunk["content"][:200],
-            })
+            citations.append(
+                {
+                    "document_id": chunk["document_id"],
+                    "document_title": chunk["document_title"],
+                    "chunk_id": chunk["chunk_id"],
+                    "relevance_score": max(relevance, 0.1),
+                    "excerpt": chunk["content"][:200],
+                }
+            )
 
     logger.info("Extracted %d citations", len(citations))
     return {"citations": citations}
@@ -269,9 +268,7 @@ def build_rag_prompt(question: str, chunks: list[dict]) -> str:
 
     context_parts = []
     for i, chunk in enumerate(chunks[:5]):
-        context_parts.append(
-            f"[Source {i + 1}: {chunk['document_title']}]\n{chunk['content']}"
-        )
+        context_parts.append(f"[Source {i + 1}: {chunk['document_title']}]\n{chunk['content']}")
     context = "\n\n---\n\n".join(context_parts)
 
     return f"""Based on the following context, answer the question accurately.
@@ -318,7 +315,7 @@ async def generate_stream_node(
             async for line in response.aiter_lines():
                 if not line or not line.startswith("data: "):
                     continue
-                payload = line[len("data: "):]
+                payload = line[len("data: ") :]
                 try:
                     chunk = json.loads(payload)
                     yield chunk

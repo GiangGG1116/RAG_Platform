@@ -5,6 +5,7 @@ StateGraph: analyze_query → retrieve → rerank → generate → cite
 Full RAG pipeline with hybrid retrieval, reranking, and citation verification.
 Supports both blocking (ainvoke) and streaming (SSE) execution modes.
 """
+
 import json
 import logging
 import time
@@ -211,16 +212,21 @@ async def stream_rag_pipeline(
 
         # ── Done ────────────────────────────────────────────────
         latency_ms = round((time.perf_counter() - start) * 1000, 2)
-        yield _sse("done", {
-            "query_id": query_id,
-            "question": question,
-            "model": model_name,
-            "latency_ms": latency_ms,
-        })
+        yield _sse(
+            "done",
+            {
+                "query_id": query_id,
+                "question": question,
+                "model": model_name,
+                "latency_ms": latency_ms,
+            },
+        )
 
         logger.info(
             "Streaming RAG query completed in %.2fms: '%s' → %d citations",
-            latency_ms, question[:50], len(citations),
+            latency_ms,
+            question[:50],
+            len(citations),
         )
 
     except Exception as e:

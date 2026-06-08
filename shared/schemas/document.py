@@ -1,4 +1,5 @@
 """Pydantic schemas for Document endpoints."""
+
 import uuid
 from datetime import datetime
 
@@ -14,15 +15,17 @@ class DocumentCreate(BaseModel):
     metadata: dict = Field(default_factory=dict, description="Additional metadata")
     tenant_id: str = Field(default="default", description="Tenant identifier")
 
-    model_config = {"json_schema_extra": {
-        "example": {
-            "title": "Sample Document",
-            "content": "This is a sample document for RAG processing.",
-            "doc_type": "text",
-            "metadata": {"author": "John Doe"},
-            "tenant_id": "default",
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "title": "Sample Document",
+                "content": "This is a sample document for RAG processing.",
+                "doc_type": "text",
+                "metadata": {"author": "John Doe"},
+                "tenant_id": "default",
+            }
         }
-    }}
+    }
 
 
 class ChunkResponse(BaseModel):

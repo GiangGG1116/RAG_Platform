@@ -77,7 +77,15 @@ jobs:
           LOG_LEVEL: WARNING
           LOG_FORMAT: text
         run: |
-          python -m pytest services/ -v --tb=short --cov=shared --cov=services --cov-report=xml
+          pip install coverage
+          coverage erase
+          for service in api_gateway ingestion retrieval llm_service worker; do
+            if [ -d "services/$service/tests" ]; then
+              echo "Running tests for $service..."
+              PYTHONPATH=services/$service python -m pytest services/$service/tests -v --tb=short --cov=shared --cov=services/$service/app --cov-append
+            fi
+          done
+          coverage xml -o coverage.xml
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4

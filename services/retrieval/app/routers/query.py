@@ -33,6 +33,7 @@ async def execute_query(
         top_k=query.top_k,
         rerank=query.rerank,
         http_client=request.app.state.http_client,
+        filters=query.filters.model_dump(exclude_none=True) if query.filters else None,
     )
 
     latency_ms = round((time.perf_counter() - start) * 1000, 2)
@@ -71,6 +72,7 @@ async def execute_query_stream(
             top_k=query.top_k,
             rerank=query.rerank,
             http_client=request.app.state.http_client,
+            filters=query.filters.model_dump(exclude_none=True) if query.filters else None,
         ),
         media_type="text/event-stream",
         headers={

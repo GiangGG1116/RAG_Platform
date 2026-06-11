@@ -56,3 +56,7 @@ migrations/versions/__pycache__/
 
 helm/rag-platform/values.yaml
 helm/rag-platform/secrets.yaml
+
+# Evaluation
+scripts/eval_dataset.json
+scripts/eval_results.json

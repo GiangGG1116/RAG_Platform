@@ -38,15 +38,75 @@ async def analyze_query_node(state: dict[str, Any]) -> dict[str, Any]:
     return {"query_analysis": analysis}
 
 
+def _build_filter_clauses(
+    filters: dict[str, Any] | None,
+) -> tuple[str, dict[str, Any]]:
+    """Build additional SQL WHERE clauses and params from retrieval filters.
+
+    Returns a tuple of (sql_fragment, params_dict).  The sql_fragment
+    contains zero or more ``AND …`` clauses that can be appended directly
+    after the base ``WHERE`` clause in the retrieval queries.
+    """
+    if not filters:
+        return "", {}
+
+    clauses: list[str] = []
+    params: dict[str, Any] = {}
+
+    # ── Filter by specific document IDs ─────────────────────────
+    document_ids = filters.get("document_ids")
+    if document_ids:
+        placeholders = ", ".join([f":filter_doc_id_{i}" for i in range(len(document_ids))])
+        clauses.append(f"d.id IN ({placeholders})")
+        for i, doc_id in enumerate(document_ids):
+            params[f"filter_doc_id_{i}"] = doc_id
+
+    # ── Filter by document type ─────────────────────────────────
+    doc_types = filters.get("doc_types")
+    if doc_types:
+        placeholders = ", ".join([f":filter_doc_type_{i}" for i in range(len(doc_types))])
+        clauses.append(f"d.doc_type IN ({placeholders})")
+        for i, dt in enumerate(doc_types):
+            params[f"filter_doc_type_{i}"] = dt
+
+    # ── Filter by creation date range ───────────────────────────
+    date_from = filters.get("date_from")
+    if date_from:
+        clauses.append("d.created_at >= :filter_date_from")
+        params["filter_date_from"] = date_from
+
+    date_to = filters.get("date_to")
+    if date_to:
+        clauses.append("d.created_at <= :filter_date_to")
+        params["filter_date_to"] = date_to
+
+    # ── Filter by JSONB metadata on documents ───────────────────
+    metadata_filters = filters.get("metadata_filters")
+    if metadata_filters and isinstance(metadata_filters, dict):
+        for idx, (key, value) in enumerate(metadata_filters.items()):
+            param_name = f"filter_meta_{idx}"
+            # Use the @> (contains) operator for exact key/value match
+            clauses.append(f"d.metadata @> CAST(:{param_name} AS jsonb)")
+            params[param_name] = json.dumps({key: value})
+
+    sql_fragment = ""
+    if clauses:
+        sql_fragment = " AND " + " AND ".join(clauses)
+
+    return sql_fragment, params
+
+
 async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Hybrid retrieval: vector similarity + keyword search."""
+    """Hybrid retrieval: vector similarity + keyword search with optional filters."""
     question = state["question"]
     tenant_id = state["tenant_id"]
     top_k = state["top_k"]
+    filters = state.get("filters")
 
-    # Check cache first
+    # Check cache first (include filters in the cache key for correctness)
     cache = await get_cache()
-    cache_key = build_cache_key("rag", "retrieve", tenant_id, question[:100])
+    filters_fingerprint = json.dumps(filters, sort_keys=True, default=str) if filters else ""
+    cache_key = build_cache_key("rag", "retrieve", tenant_id, question[:100], filters_fingerprint)
     cached = await cache.get(cache_key)
     if cached:
         logger.info("Cache hit for retrieval query")
@@ -54,6 +114,11 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
 
     settings = get_settings()
     retrieved_chunks: list[dict] = []
+
+    # Build advanced filter SQL clauses
+    filter_sql, filter_params = _build_filter_clauses(filters)
+    if filter_sql:
+        logger.info("Applying retrieval filters: %s", list(filter_params.keys()))
 
     # Get query embedding from LLM service
     http_client = state["http_client"]
@@ -72,7 +137,7 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
         if query_embedding:
             # Vector similarity search using pgvector
             embedding_str = f"[{','.join(str(x) for x in query_embedding)}]"
-            vector_query = text("""
+            vector_query = text(f"""
                 SELECT c.id, c.document_id, c.content, c.chunk_index, c.metadata,
                        d.title as document_title,
                        1 - (c.embedding <=> CAST(:embedding AS vector)) as similarity_score
@@ -80,13 +145,12 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
                 JOIN documents d ON d.id = c.document_id
                 WHERE d.tenant_id = :tenant_id
                   AND c.embedding IS NOT NULL
+                  {filter_sql}
                 ORDER BY c.embedding <=> CAST(:embedding AS vector)
                 LIMIT :top_k
-            """)
-            result = await session.execute(
-                vector_query,
-                {"embedding": embedding_str, "tenant_id": tenant_id, "top_k": top_k},
-            )
+            """)  # noqa: S608
+            params = {"embedding": embedding_str, "tenant_id": tenant_id, "top_k": top_k, **filter_params}
+            result = await session.execute(vector_query, params)
             for row in result.mappings():
                 retrieved_chunks.append(
                     {
@@ -112,9 +176,10 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
                     JOIN documents d ON d.id = c.document_id
                     WHERE d.tenant_id = :tenant_id
                       AND ({keyword_conditions})
+                      {filter_sql}
                     LIMIT :top_k
                 """)  # noqa: S608
-                params = {"tenant_id": tenant_id, "top_k": top_k}
+                params = {"tenant_id": tenant_id, "top_k": top_k, **filter_params}
                 for i, kw in enumerate(safe_keywords):
                     params[f"kw_{i}"] = f"%{kw}%"
                 result = await session.execute(keyword_query, params)

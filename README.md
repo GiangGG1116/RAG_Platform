@@ -11,16 +11,16 @@ flowchart TB
     
     %% Edge Layer
     subgraph Edge ["Edge Layer"]
-        Gateway{"API Gateway\n(:8000)"}
+        Gateway{"API Gateway"}
         RedisAuth[("Redis\n(Rate Limiting & Auth)")]
         Gateway -. "Check Limits" .-> RedisAuth
     end
     
     %% Microservices Layer
     subgraph Services ["Core Microservices"]
-        Ingestion["Ingestion Service\n(:8001)\nLangGraph: Chunking"]
-        Retrieval["Retrieval Service\n(:8002)\nLangGraph: RAG Logic"]
-        LLM["LLM Service\n(:8003)\nOrchestrator"]
+        Ingestion["Ingestion Service\nLangGraph: Chunking"]
+        Retrieval["Retrieval Service\nLangGraph: RAG Logic"]
+        LLM["LLM Service\n\nOrchestrator"]
         Worker["Embedding Worker\n(Background Async)"]
     end
     

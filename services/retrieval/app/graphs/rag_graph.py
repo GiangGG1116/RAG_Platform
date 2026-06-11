@@ -35,6 +35,7 @@ class RAGState(TypedDict):
     tenant_id: str
     top_k: int
     rerank: bool
+    filters: dict | None  # RetrievalFilters serialised to dict
     http_client: Any  # httpx.AsyncClient
     # Populated during pipeline
     query_analysis: dict
@@ -103,6 +104,7 @@ async def run_rag_pipeline(
     top_k: int,
     rerank: bool,
     http_client: httpx.AsyncClient,
+    filters: dict | None = None,
 ) -> dict[str, Any]:
     """Execute the full RAG pipeline (blocking mode)."""
     initial_state: RAGState = {
@@ -110,6 +112,7 @@ async def run_rag_pipeline(
         "tenant_id": tenant_id,
         "top_k": top_k,
         "rerank": rerank,
+        "filters": filters,
         "http_client": http_client,
         "query_analysis": {},
         "retrieved_chunks": [],
@@ -140,6 +143,7 @@ async def stream_rag_pipeline(
     top_k: int,
     rerank: bool,
     http_client: httpx.AsyncClient,
+    filters: dict | None = None,
 ) -> AsyncIterator[str]:
     """Execute the RAG pipeline with streaming LLM generation.
 
@@ -161,6 +165,7 @@ async def stream_rag_pipeline(
         "tenant_id": tenant_id,
         "top_k": top_k,
         "rerank": rerank,
+        "filters": filters,
         "http_client": http_client,
         "query_analysis": {},
         "retrieved_chunks": [],

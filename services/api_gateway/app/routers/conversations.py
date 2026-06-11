@@ -14,11 +14,11 @@ import math
 import uuid
 from typing import Any
 
+from app.middleware.auth import verify_api_key
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.middleware.auth import verify_api_key
 from shared.database import get_db_session
 from shared.models.conversation import ChatMessage, Conversation
 from shared.schemas.conversation import (
@@ -41,7 +41,9 @@ router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 async def _get_or_404(session: AsyncSession, conv_id: uuid.UUID) -> Conversation:
     """Fetch conversation or raise 404."""
-    result = await session.execute(select(Conversation).where(Conversation.id == conv_id))
+    result = await session.execute(
+        select(Conversation).where(Conversation.id == conv_id)
+    )
     conv = result.scalar_one_or_none()
     if conv is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -99,7 +101,9 @@ async def list_conversations(
     async with get_db_session() as session:
         # Total count
         count_result = await session.execute(
-            select(func.count(Conversation.id)).where(Conversation.tenant_id == tenant_id)
+            select(func.count(Conversation.id)).where(
+                Conversation.tenant_id == tenant_id
+            )
         )
         total = count_result.scalar_one()
 

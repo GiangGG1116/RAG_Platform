@@ -3,10 +3,10 @@
 import logging
 from typing import Any
 
+from app.middleware.auth import verify_api_key
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from app.middleware.auth import verify_api_key
 from shared.auth import TokenData, TokenResponse, UserRole, create_access_token
 
 logger = logging.getLogger(__name__)

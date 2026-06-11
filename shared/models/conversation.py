@@ -16,10 +16,16 @@ class Conversation(Base):
 
     __tablename__ = "conversations"
 
-    tenant_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True, default="default")
-    title: Mapped[str] = mapped_column(String(500), nullable=False, default="New Conversation")
+    tenant_id: Mapped[str] = mapped_column(
+        String(100), nullable=False, index=True, default="default"
+    )
+    title: Mapped[str] = mapped_column(
+        String(500), nullable=False, default="New Conversation"
+    )
     # The Redis-side conversation_id used for LLM memory (may differ from PK)
-    memory_id: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    memory_id: Mapped[str | None] = mapped_column(
+        String(200), nullable=True, index=True
+    )
 
     # Relationships
     messages: Mapped[list[ChatMessage]] = relationship(
@@ -30,7 +36,9 @@ class Conversation(Base):
         lazy="selectin",
     )
 
-    __table_args__ = (Index("idx_conversations_tenant_updated", "tenant_id", "updated_at"),)
+    __table_args__ = (
+        Index("idx_conversations_tenant_updated", "tenant_id", "updated_at"),
+    )
 
     def __repr__(self) -> str:
         return f"<Conversation(id={self.id}, title='{self.title}')>"
@@ -47,7 +55,9 @@ class ChatMessage(Base):
         nullable=False,
         index=True,
     )
-    role: Mapped[str] = mapped_column(String(20), nullable=False)  # 'user' | 'assistant'
+    role: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # 'user' | 'assistant'
     content: Mapped[str] = mapped_column(Text, nullable=False)
     # Optional rich metadata: citations, model, latency_ms, etc.
     meta: Mapped[dict] = mapped_column("meta", JSONB, nullable=False, default=dict)
@@ -55,9 +65,13 @@ class ChatMessage(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # Relationship back to conversation
-    conversation: Mapped[Conversation] = relationship("Conversation", back_populates="messages")
+    conversation: Mapped[Conversation] = relationship(
+        "Conversation", back_populates="messages"
+    )
 
-    __table_args__ = (Index("idx_chat_messages_conversation_position", "conversation_id", "position"),)
+    __table_args__ = (
+        Index("idx_chat_messages_conversation_position", "conversation_id", "position"),
+    )
 
     def __repr__(self) -> str:
         return f"<ChatMessage(id={self.id}, role='{self.role}', conv={self.conversation_id})>"

@@ -9,10 +9,10 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-
 from app.providers import get_llm_provider
 from app.routers import generate
+from fastapi import FastAPI
+
 from shared.observability import instrument_fastapi, setup_observability
 
 logger = logging.getLogger(__name__)

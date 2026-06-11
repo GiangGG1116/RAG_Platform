@@ -14,7 +14,9 @@ class ConversationCreate(BaseModel):
 
     tenant_id: str = Field(default="default")
     title: str = Field(default="New Conversation", max_length=500)
-    memory_id: str | None = Field(default=None, description="Redis conversation_id if any")
+    memory_id: str | None = Field(
+        default=None, description="Redis conversation_id if any"
+    )
 
 
 class ConversationUpdate(BaseModel):
@@ -29,7 +31,9 @@ class MessageCreate(BaseModel):
 
     role: str = Field(..., pattern="^(user|assistant)$")
     content: str = Field(..., min_length=1)
-    meta: dict[str, Any] = Field(default_factory=dict, description="citations, model, latency_ms …")
+    meta: dict[str, Any] = Field(
+        default_factory=dict, description="citations, model, latency_ms …"
+    )
 
 
 class BulkMessageCreate(BaseModel):

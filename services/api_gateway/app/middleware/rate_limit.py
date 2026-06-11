@@ -32,10 +32,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         try:
             cache = await get_cache()
-            current_count = await cache.incr(cache_key, ttl_seconds=settings.rate_limit_window_seconds)
+            current_count = await cache.incr(
+                cache_key, ttl_seconds=settings.rate_limit_window_seconds
+            )
 
             if current_count > settings.rate_limit_requests:
-                logger.warning("Rate limit exceeded for %s: %d requests", client_identity, current_count)
+                logger.warning(
+                    "Rate limit exceeded for %s: %d requests",
+                    client_identity,
+                    current_count,
+                )
                 return JSONResponse(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     content={"detail": "Rate limit exceeded. Try again later."},
@@ -54,7 +60,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         except Exception:
             # If Redis is down, allow the request through (fail-open)
-            logger.warning("Rate limiter failed, allowing request through", exc_info=True)
+            logger.warning(
+                "Rate limiter failed, allowing request through", exc_info=True
+            )
             return await call_next(request)
 
     @staticmethod

@@ -79,7 +79,9 @@ async def extract_text_node(state: dict[str, Any]) -> dict[str, Any]:
         if doc:
             doc.status = DocumentStatus.PROCESSING
 
-    logger.info("Text extracted for document %s: %d chars", state["document_id"], len(extracted))
+    logger.info(
+        "Text extracted for document %s: %d chars", state["document_id"], len(extracted)
+    )
     return {"extracted_text": extracted}
 
 
@@ -116,7 +118,9 @@ async def chunk_text_node(state: dict[str, Any]) -> dict[str, Any]:
 
             # Keep overlap
             words = current_chunk.split()
-            overlap_words = words[-chunk_overlap:] if len(words) > chunk_overlap else words
+            overlap_words = (
+                words[-chunk_overlap:] if len(words) > chunk_overlap else words
+            )
             current_chunk = " ".join(overlap_words) + " " + sentence
         else:
             current_chunk += " " + sentence if current_chunk else sentence
@@ -187,7 +191,9 @@ async def update_status_node(state: dict[str, Any]) -> dict[str, Any]:
                 doc.status = DocumentStatus.FAILED
                 doc.error_message = error
             elif chunk_count > 0:
-                doc.status = DocumentStatus.PROCESSING  # Will become COMPLETED after embeddings
+                doc.status = (
+                    DocumentStatus.PROCESSING
+                )  # Will become COMPLETED after embeddings
                 doc.chunk_count = chunk_count
             else:
                 doc.status = DocumentStatus.COMPLETED

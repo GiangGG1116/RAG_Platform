@@ -29,7 +29,9 @@ class Chunk(Base):
         nullable=True,
     )
     token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    metadata_: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
+    metadata_: Mapped[dict] = mapped_column(
+        "metadata", JSONB, nullable=False, default=dict
+    )
 
     # Relationships
     document = relationship("Document", back_populates="chunks")

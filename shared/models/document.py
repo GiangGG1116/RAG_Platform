@@ -33,13 +33,22 @@ class Document(Base):
         default=DocumentStatus.PENDING,
         index=True,
     )
-    metadata_: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    tenant_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True, default="default")
+    metadata_: Mapped[dict] = mapped_column(
+        "metadata", JSONB, nullable=False, default=dict
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(100), nullable=False, index=True, default="default"
+    )
     chunk_count: Mapped[int] = mapped_column(nullable=False, default=0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
-    chunks = relationship("Chunk", back_populates="document", cascade="all, delete-orphan", lazy="selectin")
+    chunks = relationship(
+        "Chunk",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     __table_args__ = (Index("idx_documents_tenant_status", "tenant_id", "status"),)
 

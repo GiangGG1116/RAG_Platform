@@ -38,7 +38,10 @@ class LocalProvider(BaseLLMProvider):
         return {
             "text": _MOCK_ANSWER,
             "model": "local-mock",
-            "usage": {"prompt_tokens": len(prompt.split()), "completion_tokens": len(_MOCK_ANSWER.split())},
+            "usage": {
+                "prompt_tokens": len(prompt.split()),
+                "completion_tokens": len(_MOCK_ANSWER.split()),
+            },
         }
 
     async def generate_stream(
@@ -57,7 +60,10 @@ class LocalProvider(BaseLLMProvider):
         yield {
             "done": True,
             "model": "local-mock",
-            "usage": {"prompt_tokens": len(prompt.split()), "completion_tokens": len(words)},
+            "usage": {
+                "prompt_tokens": len(prompt.split()),
+                "completion_tokens": len(words),
+            },
         }
 
     async def embed(self, text: str) -> dict[str, Any]:

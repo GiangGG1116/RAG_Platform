@@ -23,25 +23,57 @@ def upgrade() -> None:
     # Documents table
     op.create_table(
         "documents",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id",
+            UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column("title", sa.String(500), nullable=False, index=True),
         sa.Column("content", sa.Text, nullable=True),
         sa.Column("source", sa.String(1000), nullable=True),
         sa.Column("doc_type", sa.String(50), nullable=False, server_default="text"),
-        sa.Column("status", sa.String(20), nullable=False, server_default="pending", index=True),
+        sa.Column(
+            "status",
+            sa.String(20),
+            nullable=False,
+            server_default="pending",
+            index=True,
+        ),
         sa.Column("metadata", JSONB, nullable=False, server_default="{}"),
-        sa.Column("tenant_id", sa.String(100), nullable=False, server_default="default", index=True),
+        sa.Column(
+            "tenant_id",
+            sa.String(100),
+            nullable=False,
+            server_default="default",
+            index=True,
+        ),
         sa.Column("chunk_count", sa.Integer, nullable=False, server_default="0"),
         sa.Column("error_message", sa.Text, nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
     )
     op.create_index("idx_documents_tenant_status", "documents", ["tenant_id", "status"])
 
     # Chunks table with pgvector
     op.create_table(
         "chunks",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id",
+            UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column(
             "document_id",
             UUID(as_uuid=True),
@@ -54,9 +86,21 @@ def upgrade() -> None:
         sa.Column("embedding", Vector(1536), nullable=True),
         sa.Column("token_count", sa.Integer, nullable=False, server_default="0"),
         sa.Column("metadata", JSONB, nullable=False, server_default="{}"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.UniqueConstraint("document_id", "chunk_index", name="uq_chunks_document_index"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.UniqueConstraint(
+            "document_id", "chunk_index", name="uq_chunks_document_index"
+        ),
     )
 
     # HNSW index for vector search

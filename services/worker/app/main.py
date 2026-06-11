@@ -11,9 +11,14 @@ import logging
 import signal
 
 from app.consumers.embedding_consumer import handle_embedding_message
+
 from shared.cache import close_cache, get_cache
 from shared.database import dispose_engine
-from shared.messaging import QUEUE_EMBEDDING_GENERATE, ROUTING_KEY_EMBEDDING, RabbitMQConsumer
+from shared.messaging import (
+    QUEUE_EMBEDDING_GENERATE,
+    ROUTING_KEY_EMBEDDING,
+    RabbitMQConsumer,
+)
 from shared.observability import setup_observability
 
 logger = logging.getLogger(__name__)

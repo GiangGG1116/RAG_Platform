@@ -25,7 +25,9 @@ async def analyze_query_node(state: dict[str, Any]) -> dict[str, Any]:
     question = state["question"]
 
     # Simple keyword extraction (in production, use LLM for this)
-    keywords = [word.lower().strip(".,!?;:") for word in question.split() if len(word) > 3]
+    keywords = [
+        word.lower().strip(".,!?;:") for word in question.split() if len(word) > 3
+    ]
 
     analysis = {
         "original_query": question,
@@ -56,7 +58,9 @@ def _build_filter_clauses(
     # ── Filter by specific document IDs ─────────────────────────
     document_ids = filters.get("document_ids")
     if document_ids:
-        placeholders = ", ".join([f":filter_doc_id_{i}" for i in range(len(document_ids))])
+        placeholders = ", ".join(
+            [f":filter_doc_id_{i}" for i in range(len(document_ids))]
+        )
         clauses.append(f"d.id IN ({placeholders})")
         for i, doc_id in enumerate(document_ids):
             params[f"filter_doc_id_{i}"] = doc_id
@@ -64,7 +68,9 @@ def _build_filter_clauses(
     # ── Filter by document type ─────────────────────────────────
     doc_types = filters.get("doc_types")
     if doc_types:
-        placeholders = ", ".join([f":filter_doc_type_{i}" for i in range(len(doc_types))])
+        placeholders = ", ".join(
+            [f":filter_doc_type_{i}" for i in range(len(doc_types))]
+        )
         clauses.append(f"d.doc_type IN ({placeholders})")
         for i, dt in enumerate(doc_types):
             params[f"filter_doc_type_{i}"] = dt
@@ -105,8 +111,12 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
 
     # Check cache first (include filters in the cache key for correctness)
     cache = await get_cache()
-    filters_fingerprint = json.dumps(filters, sort_keys=True, default=str) if filters else ""
-    cache_key = build_cache_key("rag", "retrieve", tenant_id, question[:100], filters_fingerprint)
+    filters_fingerprint = (
+        json.dumps(filters, sort_keys=True, default=str) if filters else ""
+    )
+    cache_key = build_cache_key(
+        "rag", "retrieve", tenant_id, question[:100], filters_fingerprint
+    )
     cached = await cache.get(cache_key)
     if cached:
         logger.info("Cache hit for retrieval query")
@@ -149,7 +159,12 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
                 ORDER BY c.embedding <=> CAST(:embedding AS vector)
                 LIMIT :top_k
             """)  # noqa: S608
-            params = {"embedding": embedding_str, "tenant_id": tenant_id, "top_k": top_k, **filter_params}
+            params = {
+                "embedding": embedding_str,
+                "tenant_id": tenant_id,
+                "top_k": top_k,
+                **filter_params,
+            }
             result = await session.execute(vector_query, params)
             for row in result.mappings():
                 retrieved_chunks.append(
@@ -167,7 +182,9 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
             keywords = state.get("query_analysis", {}).get("keywords", [])
             if keywords:
                 safe_keywords = keywords[:5]
-                keyword_conditions = " OR ".join([f"c.content ILIKE :kw_{i}" for i in range(len(safe_keywords))])
+                keyword_conditions = " OR ".join(
+                    [f"c.content ILIKE :kw_{i}" for i in range(len(safe_keywords))]
+                )
                 keyword_query = text(f"""
                     SELECT c.id, c.document_id, c.content, c.chunk_index, c.metadata,
                            d.title as document_title,
@@ -255,7 +272,9 @@ async def generate_node(state: dict[str, Any]) -> dict[str, Any]:
     # Build context from chunks
     context_parts = []
     for i, chunk in enumerate(chunks[:5]):
-        context_parts.append(f"[Source {i + 1}: {chunk['document_title']}]\n{chunk['content']}")
+        context_parts.append(
+            f"[Source {i + 1}: {chunk['document_title']}]\n{chunk['content']}"
+        )
     context = "\n\n---\n\n".join(context_parts)
 
     # Call LLM service
@@ -286,7 +305,9 @@ Answer:"""
         answer = result.get("text", "")
         model = result.get("model", "unknown")
 
-        logger.info("LLM generated answer (%d chars) using model %s", len(answer), model)
+        logger.info(
+            "LLM generated answer (%d chars) using model %s", len(answer), model
+        )
         return {"answer": answer, "model": model}
 
     except Exception:
@@ -333,7 +354,9 @@ def build_rag_prompt(question: str, chunks: list[dict]) -> str:
 
     context_parts = []
     for i, chunk in enumerate(chunks[:5]):
-        context_parts.append(f"[Source {i + 1}: {chunk['document_title']}]\n{chunk['content']}")
+        context_parts.append(
+            f"[Source {i + 1}: {chunk['document_title']}]\n{chunk['content']}"
+        )
     context = "\n\n---\n\n".join(context_parts)
 
     return f"""Based on the following context, answer the question accurately.
@@ -389,5 +412,7 @@ async def generate_stream_node(
 
     except Exception as e:
         logger.exception("Streaming generation via LLM service failed")
-        yield {"token": "Sorry, I encountered an error generating the answer. Please try again."}
+        yield {
+            "token": "Sorry, I encountered an error generating the answer. Please try again."
+        }
         yield {"error": str(e), "done": True, "model": "error", "usage": {}}

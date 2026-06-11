@@ -29,7 +29,9 @@ from pathlib import Path
 
 import httpx
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -90,7 +92,9 @@ async def collect_rag_results(
             )
 
             try:
-                rag_result = await query_rag_pipeline(client, api_url, api_key, question)
+                rag_result = await query_rag_pipeline(
+                    client, api_url, api_key, question
+                )
 
                 # Extract contexts from retrieved chunks
                 contexts = [
@@ -146,8 +150,7 @@ def run_ragas_evaluation(results: list[dict]) -> dict:
         )
     except ImportError:
         logger.error(
-            "Required packages not installed. Run:\n"
-            "  pip install ragas datasets"
+            "Required packages not installed. Run:\n" "  pip install ragas datasets"
         )
         sys.exit(1)
 
@@ -184,7 +187,12 @@ def save_results(ragas_result, output_path: Path, raw_results: list[dict]) -> No
 
     # Extract average scores
     avg_scores = {}
-    metric_names = ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]
+    metric_names = [
+        "faithfulness",
+        "answer_relevancy",
+        "context_precision",
+        "context_recall",
+    ]
     for metric in metric_names:
         if metric in scores:
             values = list(scores[metric].values())
@@ -217,7 +225,9 @@ def save_results(ragas_result, output_path: Path, raw_results: list[dict]) -> No
         sample = {
             "question": row.get("question", ""),
             "answer": row.get("answer", ""),
-            "ground_truth": raw_results[i]["ground_truth"] if i < len(raw_results) else "",
+            "ground_truth": (
+                raw_results[i]["ground_truth"] if i < len(raw_results) else ""
+            ),
         }
         for metric in metric_names:
             if metric in row:
@@ -234,9 +244,18 @@ def save_results(ragas_result, output_path: Path, raw_results: list[dict]) -> No
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="RAGAS Evaluation for RAG Platform")
     parser.add_argument("--api-url", default=DEFAULT_API_URL, help="API Gateway URL")
-    parser.add_argument("--api-key", default=DEFAULT_API_KEY, help="API key for authentication")
-    parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET, help="Path to eval dataset JSON")
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="Path to save results JSON")
+    parser.add_argument(
+        "--api-key", default=DEFAULT_API_KEY, help="API key for authentication"
+    )
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=DEFAULT_DATASET,
+        help="Path to eval dataset JSON",
+    )
+    parser.add_argument(
+        "--output", type=Path, default=DEFAULT_OUTPUT, help="Path to save results JSON"
+    )
     return parser.parse_args()
 
 

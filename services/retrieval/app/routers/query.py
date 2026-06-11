@@ -4,10 +4,10 @@ import logging
 import time
 from typing import Any
 
+from app.graphs.rag_graph import run_rag_pipeline, stream_rag_pipeline
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from app.graphs.rag_graph import run_rag_pipeline, stream_rag_pipeline
 from shared.schemas.query import QueryRequest, QueryResponse
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,9 @@ async def execute_query_stream(
             top_k=query.top_k,
             rerank=query.rerank,
             http_client=request.app.state.http_client,
-            filters=query.filters.model_dump(exclude_none=True) if query.filters else None,
+            filters=(
+                query.filters.model_dump(exclude_none=True) if query.filters else None
+            ),
         ),
         media_type="text/event-stream",
         headers={

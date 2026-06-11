@@ -7,8 +7,8 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
-
 from app.providers.base import BaseLLMProvider
+
 from shared.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,11 @@ class OpenAIProvider(BaseLLMProvider):
                     continue
                 raise
 
-        return {"text": "Generation failed after retries.", "model": "error", "usage": {}}
+        return {
+            "text": "Generation failed after retries.",
+            "model": "error",
+            "usage": {},
+        }
 
     async def generate_stream(
         self,
@@ -187,7 +191,10 @@ class OpenAIProvider(BaseLLMProvider):
                                     "on a scale of 0 to 1. Only respond with a number."
                                 ),
                             },
-                            {"role": "user", "content": f"Query: {query}\n\nPassage: {passage[:500]}"},
+                            {
+                                "role": "user",
+                                "content": f"Query: {query}\n\nPassage: {passage[:500]}",
+                            },
                         ],
                         "max_tokens": 5,
                         "temperature": 0,

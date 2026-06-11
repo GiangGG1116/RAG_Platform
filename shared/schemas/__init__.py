@@ -8,12 +8,7 @@ from shared.schemas.document import (
     DocumentStatusResponse,
 )
 from shared.schemas.health import HealthResponse, ServiceHealth
-from shared.schemas.query import (
-    Citation,
-    QueryRequest,
-    QueryResponse,
-    RetrievedChunk,
-)
+from shared.schemas.query import Citation, QueryRequest, QueryResponse, RetrievedChunk
 
 __all__ = [
     "ChunkResponse",

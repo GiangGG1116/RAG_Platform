@@ -85,7 +85,9 @@ class RedisCache:
                 count += 1
             return count
         except Exception:
-            logger.warning("Cache DELETE_PATTERN failed for: %s", pattern, exc_info=True)
+            logger.warning(
+                "Cache DELETE_PATTERN failed for: %s", pattern, exc_info=True
+            )
             return 0
 
     async def exists(self, key: str) -> bool:

@@ -41,7 +41,9 @@ class TestJWTAuth:
             "exp": datetime.now(UTC) - timedelta(hours=1),
             "iat": datetime.now(UTC) - timedelta(hours=2),
         }
-        token = pyjwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+        token = pyjwt.encode(
+            payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+        )
 
         with pytest.raises(ValueError, match="expired"):
             verify_token(token)
@@ -64,7 +66,9 @@ class TestRBAC:
         from shared.auth import check_permission
 
         assert check_permission(UserRole.ADMIN, "POST", "/api/v1/documents") is True
-        assert check_permission(UserRole.ADMIN, "DELETE", "/api/v1/documents/123") is True
+        assert (
+            check_permission(UserRole.ADMIN, "DELETE", "/api/v1/documents/123") is True
+        )
         assert check_permission(UserRole.ADMIN, "POST", "/api/v1/admin/tokens") is True
         assert check_permission(UserRole.ADMIN, "POST", "/api/v1/query") is True
 
@@ -72,13 +76,17 @@ class TestRBAC:
         from shared.auth import check_permission
 
         assert check_permission(UserRole.EDITOR, "POST", "/api/v1/documents") is True
-        assert check_permission(UserRole.EDITOR, "DELETE", "/api/v1/documents/123") is True
+        assert (
+            check_permission(UserRole.EDITOR, "DELETE", "/api/v1/documents/123") is True
+        )
         assert check_permission(UserRole.EDITOR, "POST", "/api/v1/query") is True
 
     def test_editor_cannot_create_tokens(self):
         from shared.auth import check_permission
 
-        assert check_permission(UserRole.EDITOR, "POST", "/api/v1/admin/tokens") is False
+        assert (
+            check_permission(UserRole.EDITOR, "POST", "/api/v1/admin/tokens") is False
+        )
 
     def test_viewer_can_only_read(self):
         from shared.auth import check_permission
@@ -90,7 +98,10 @@ class TestRBAC:
         from shared.auth import check_permission
 
         assert check_permission(UserRole.VIEWER, "POST", "/api/v1/documents") is False
-        assert check_permission(UserRole.VIEWER, "DELETE", "/api/v1/documents/123") is False
+        assert (
+            check_permission(UserRole.VIEWER, "DELETE", "/api/v1/documents/123")
+            is False
+        )
 
 
 class TestHealthSchemas:
@@ -141,6 +152,8 @@ class TestQuerySchemas:
     def test_query_request_custom_params(self):
         from shared.schemas.query import QueryRequest
 
-        query = QueryRequest(question="Test?", top_k=10, rerank=False, tenant_id="custom")
+        query = QueryRequest(
+            question="Test?", top_k=10, rerank=False, tenant_id="custom"
+        )
         assert query.top_k == 10
         assert query.rerank is False

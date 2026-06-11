@@ -13,9 +13,7 @@ from sqlalchemy.pool import NullPool
 from shared.config import get_settings
 
 
-def create_engine(
-    pool_size: int = 20, max_overflow: int = 10, use_null_pool: bool = False
-):
+def create_engine(pool_size: int = 20, max_overflow: int = 10, use_null_pool: bool = False):
     """Create an async SQLAlchemy engine with connection pooling."""
     settings = get_settings()
     kwargs = {

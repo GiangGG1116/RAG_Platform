@@ -153,9 +153,7 @@ class RabbitMQConsumer:
                         body = json.loads(message.body.decode())
                         await self._handler(body)
                     except Exception:
-                        logger.exception(
-                            "Error processing message from %s", self._queue_name
-                        )
+                        logger.exception("Error processing message from %s", self._queue_name)
                         # Message will be requeued or sent to DLQ after max retries
 
     async def stop(self) -> None:

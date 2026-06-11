@@ -85,9 +85,7 @@ class Settings(BaseSettings):
     # ── Auth ─────────────────────────────────────────────
     api_key_header: str = "X-API-Key"
     api_keys: str = "default-api-key-change-me"
-    jwt_secret_key: str = (
-        "change-me-to-a-secure-random-string-in-production"  # noqa: S105
-    )
+    jwt_secret_key: str = "change-me-to-a-secure-random-string-in-production"  # noqa: S105
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60
 

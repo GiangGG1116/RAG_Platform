@@ -13,9 +13,7 @@ class TestIngestionValidation:
         from services.ingestion.app.graphs.nodes import validate_document_node
 
         state = {"content": "", "document_id": "test-id"}
-        with patch(
-            "services.ingestion.app.graphs.nodes.get_cache", new_callable=AsyncMock
-        ):
+        with patch("services.ingestion.app.graphs.nodes.get_cache", new_callable=AsyncMock):
             result = await validate_document_node(state)
             assert result["is_valid"] is False
             assert "empty" in result["error"]
@@ -28,9 +26,7 @@ class TestIngestionValidation:
         )
 
         state = {"content": "x" * (MAX_CONTENT_LENGTH + 1), "document_id": "test-id"}
-        with patch(
-            "services.ingestion.app.graphs.nodes.get_cache", new_callable=AsyncMock
-        ) as mock_cache:
+        with patch("services.ingestion.app.graphs.nodes.get_cache", new_callable=AsyncMock) as mock_cache:
             mock_cache_inst = AsyncMock()
             mock_cache_inst.get = AsyncMock(return_value=None)
             mock_cache_inst.set = AsyncMock(return_value=True)

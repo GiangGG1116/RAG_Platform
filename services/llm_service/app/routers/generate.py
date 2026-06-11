@@ -67,9 +67,7 @@ async def generate_text(payload: GenerateRequest, request: Request) -> Any:
         )
 
 
-async def _stream_generate(
-    provider: Any, prompt: str, max_tokens: int, temperature: float
-) -> AsyncIterator[str]:
+async def _stream_generate(provider: Any, prompt: str, max_tokens: int, temperature: float) -> AsyncIterator[str]:
     """SSE generator that yields token events from the LLM provider."""
     try:
         async for chunk in provider.generate_stream(
@@ -84,9 +82,7 @@ async def _stream_generate(
 
 
 @router.post("/generate/stream", summary="Stream text generation (SSE)")
-async def generate_text_stream(
-    payload: GenerateRequest, request: Request
-) -> StreamingResponse:
+async def generate_text_stream(payload: GenerateRequest, request: Request) -> StreamingResponse:
     """Stream text generation token-by-token using Server-Sent Events.
 
     Each SSE event contains a JSON payload:
@@ -95,9 +91,7 @@ async def generate_text_stream(
     """
     provider = request.app.state.llm_provider
     return StreamingResponse(
-        _stream_generate(
-            provider, payload.prompt, payload.max_tokens, payload.temperature
-        ),
+        _stream_generate(provider, payload.prompt, payload.max_tokens, payload.temperature),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -107,9 +101,7 @@ async def generate_text_stream(
     )
 
 
-@router.post(
-    "/embeddings", response_model=EmbeddingResponse, summary="Generate embeddings"
-)
+@router.post("/embeddings", response_model=EmbeddingResponse, summary="Generate embeddings")
 async def generate_embedding(payload: EmbeddingRequest, request: Request) -> Any:
     """Generate text embeddings."""
     provider = request.app.state.llm_provider

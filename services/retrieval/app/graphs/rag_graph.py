@@ -60,9 +60,7 @@ def _build_retrieval_graph() -> StateGraph:
     workflow.add_edge("analyze_query", "retrieve")
     workflow.add_conditional_edges(
         "retrieve",
-        lambda state: (
-            "rerank" if state.get("rerank") and state.get("retrieved_chunks") else END
-        ),
+        lambda state: "rerank" if state.get("rerank") and state.get("retrieved_chunks") else END,
         {"rerank": "rerank", END: END},
     )
     workflow.add_edge("rerank", END)
@@ -86,11 +84,7 @@ def build_rag_graph() -> StateGraph:
     workflow.add_edge("analyze_query", "retrieve")
     workflow.add_conditional_edges(
         "retrieve",
-        lambda state: (
-            "rerank"
-            if state.get("rerank") and state.get("retrieved_chunks")
-            else "generate"
-        ),
+        lambda state: "rerank" if state.get("rerank") and state.get("retrieved_chunks") else "generate",
     )
     workflow.add_edge("rerank", "generate")
     workflow.add_edge("generate", "cite")
@@ -138,8 +132,7 @@ async def run_rag_pipeline(
         "question": result["question"],
         "answer": result.get("answer", ""),
         "citations": result.get("citations", []),
-        "retrieved_chunks": result.get("reranked_chunks")
-        or result.get("retrieved_chunks", []),
+        "retrieved_chunks": result.get("reranked_chunks") or result.get("retrieved_chunks", []),
         "model": result.get("model", ""),
     }
 
@@ -194,13 +187,9 @@ async def stream_rag_pipeline(
 
         retrieval_result = await retrieval_graph.ainvoke(initial_state)
 
-        chunks = retrieval_result.get("reranked_chunks") or retrieval_result.get(
-            "retrieved_chunks", []
-        )
+        chunks = retrieval_result.get("reranked_chunks") or retrieval_result.get("retrieved_chunks", [])
         n_chunks = len(chunks)
-        yield _sse(
-            "status", {"message": f"Đã tìm thấy {n_chunks} đoạn tài liệu liên quan"}
-        )
+        yield _sse("status", {"message": f"Đã tìm thấy {n_chunks} đoạn tài liệu liên quan"})
 
         # ── Phase 2: Streaming LLM Generation ───────────────────
         yield _sse("status", {"message": "Đang tạo câu trả lời..."})

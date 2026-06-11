@@ -47,13 +47,9 @@ class RetrievalFilters(BaseModel):
 class QueryRequest(BaseModel):
     """Schema for a RAG query request."""
 
-    question: str = Field(
-        ..., min_length=1, max_length=2000, description="User question"
-    )
+    question: str = Field(..., min_length=1, max_length=2000, description="User question")
     tenant_id: str = Field(default="default", description="Tenant identifier")
-    top_k: int = Field(
-        default=5, ge=1, le=50, description="Number of chunks to retrieve"
-    )
+    top_k: int = Field(default=5, ge=1, le=50, description="Number of chunks to retrieve")
     rerank: bool = Field(default=True, description="Whether to apply reranking")
     stream: bool = Field(default=False, description="Whether to stream the response")
     filters: RetrievalFilters | None = Field(

@@ -45,6 +45,4 @@ class TestLocalProvider:
             passages=["RAG is retrieval augmented generation", "Pizza recipe"],
         )
         assert len(result["scores"]) == 2
-        assert (
-            result["scores"][0] > result["scores"][1]
-        )  # RAG passage should score higher
+        assert result["scores"][0] > result["scores"][1]  # RAG passage should score higher

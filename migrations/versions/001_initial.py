@@ -98,9 +98,7 @@ def upgrade() -> None:
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.UniqueConstraint(
-            "document_id", "chunk_index", name="uq_chunks_document_index"
-        ),
+        sa.UniqueConstraint("document_id", "chunk_index", name="uq_chunks_document_index"),
     )
 
     # HNSW index for vector search

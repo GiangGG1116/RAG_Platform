@@ -68,9 +68,7 @@ _PII_PATTERNS = [
 ]
 
 
-def _mask_pii_processor(
-    logger: Any, method_name: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+def _mask_pii_processor(logger: Any, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Mask PII (emails, phones, API keys, IPs) in log events."""
     event = event_dict.get("event", "")
     if isinstance(event, str):

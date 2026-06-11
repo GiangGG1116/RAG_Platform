@@ -49,20 +49,14 @@ async def ingest_document(payload: DocumentCreate) -> Any:
     # Trigger async ingestion pipeline (non-blocking)
     import asyncio
 
-    asyncio.create_task(
-        _run_pipeline_safe(
-            str(doc_id), payload.content, payload.title, payload.tenant_id
-        )
-    )
+    asyncio.create_task(_run_pipeline_safe(str(doc_id), payload.content, payload.title, payload.tenant_id))
 
     async with get_db_session() as session:
         result = await session.get(Document, doc_id)
         return _to_response(result)
 
 
-async def _run_pipeline_safe(
-    doc_id: str, content: str, title: str, tenant_id: str
-) -> None:
+async def _run_pipeline_safe(doc_id: str, content: str, title: str, tenant_id: str) -> None:
     """Run ingestion pipeline with error handling."""
     try:
         await run_ingestion_pipeline(
@@ -76,14 +70,10 @@ async def _run_pipeline_safe(
 
         is_cancelled = isinstance(e, asyncio.CancelledError)
         error_msg = (
-            "Ingestion pipeline cancelled (system shutdown)"
-            if is_cancelled
-            else str(e) or "Ingestion pipeline failed"
+            "Ingestion pipeline cancelled (system shutdown)" if is_cancelled else str(e) or "Ingestion pipeline failed"
         )
 
-        logger.exception(
-            "Ingestion pipeline error for document %s: %s", doc_id, error_msg
-        )
+        logger.exception("Ingestion pipeline error for document %s: %s", doc_id, error_msg)
 
         # Update document status to FAILED
         try:
@@ -112,9 +102,7 @@ async def list_documents(
     """List documents with pagination."""
     async with get_db_session() as session:
         # Count
-        count_query = select(func.count(Document.id)).where(
-            Document.tenant_id == tenant_id
-        )
+        count_query = select(func.count(Document.id)).where(Document.tenant_id == tenant_id)
         total = (await session.execute(count_query)).scalar() or 0
 
         # Items

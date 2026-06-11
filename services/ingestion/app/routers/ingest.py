@@ -5,10 +5,10 @@ import math
 from typing import Any
 from uuid import UUID
 
-from app.graphs.ingestion_graph import run_ingestion_pipeline
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import func, select
 
+from app.graphs.ingestion_graph import run_ingestion_pipeline
 from shared.database import get_db_session
 from shared.models.document import Document, DocumentStatus
 from shared.schemas.document import (

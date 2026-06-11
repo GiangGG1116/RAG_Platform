@@ -4,9 +4,9 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from app.middleware.auth import verify_api_key
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from app.middleware.auth import verify_api_key
 from shared.schemas.document import (
     DocumentCreate,
     DocumentListResponse,

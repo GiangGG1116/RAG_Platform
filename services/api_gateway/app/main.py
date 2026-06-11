@@ -10,11 +10,11 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
-from app.middleware.rate_limit import RateLimitMiddleware
-from app.routers import admin, conversations, documents, health, query
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.routers import admin, conversations, documents, health, query
 from shared.cache import close_cache, get_cache
 from shared.config import get_settings
 from shared.database import dispose_engine, engine

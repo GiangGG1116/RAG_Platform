@@ -46,7 +46,10 @@ async def verify_api_key(
 
         # RBAC permission check
         if not check_permission(token_data.role, request.method, request.url.path):
-            detail_msg = f"Role '{token_data.role.value}' does not have permission for {request.method} {request.url.path}"
+            detail_msg = (
+                f"Role '{token_data.role.value}' does not have permission "
+                f"for {request.method} {request.url.path}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=detail_msg,

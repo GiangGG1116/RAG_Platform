@@ -7,8 +7,8 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
-from app.providers.base import BaseLLMProvider
 
+from app.providers.base import BaseLLMProvider
 from shared.config import get_settings
 
 logger = logging.getLogger(__name__)

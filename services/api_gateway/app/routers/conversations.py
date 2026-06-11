@@ -14,11 +14,11 @@ import math
 import uuid
 from typing import Any
 
-from app.middleware.auth import verify_api_key
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.middleware.auth import verify_api_key
 from shared.database import get_db_session
 from shared.models.conversation import ChatMessage, Conversation
 from shared.schemas.conversation import (

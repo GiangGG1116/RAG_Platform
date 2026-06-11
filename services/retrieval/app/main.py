@@ -10,9 +10,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
-from app.routers import query
 from fastapi import FastAPI
 
+from app.routers import query
 from shared.cache import close_cache, get_cache
 from shared.database import dispose_engine
 from shared.observability import instrument_fastapi, setup_observability

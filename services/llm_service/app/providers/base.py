@@ -53,7 +53,7 @@ class BaseLLMProvider(ABC):
         """
         ...
         # pragma: no cover — abstract, must yield to be AsyncIterator
-        yield  # noqa: unreachable
+        yield
 
     @abstractmethod
     async def embed(self, text: str) -> dict[str, Any]:

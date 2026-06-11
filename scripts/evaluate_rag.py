@@ -1,3 +1,4 @@
+# ruff: noqa: T201
 """
 RAGAS Evaluation Script for the RAG Microservice Platform.
 
@@ -24,7 +25,7 @@ import json
 import logging
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -213,7 +214,7 @@ def save_results(ragas_result, output_path: Path, raw_results: list[dict]) -> No
 
     # Save full results to JSON
     output = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "num_samples": len(raw_results),
         "average_scores": avg_scores,
         "overall_score": round(overall, 4),

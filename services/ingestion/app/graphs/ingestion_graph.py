@@ -8,6 +8,8 @@ Orchestrates the document ingestion process with state tracking.
 import logging
 from typing import TypedDict
 
+from langgraph.graph import END, StateGraph
+
 from app.graphs.nodes import (
     chunk_text_node,
     extract_text_node,
@@ -15,7 +17,6 @@ from app.graphs.nodes import (
     update_status_node,
     validate_document_node,
 )
-from langgraph.graph import END, StateGraph
 
 logger = logging.getLogger(__name__)
 

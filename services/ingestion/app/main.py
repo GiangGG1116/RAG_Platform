@@ -9,9 +9,9 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from app.routers import ingest
 from fastapi import FastAPI
 
+from app.routers import ingest
 from shared.cache import close_cache, get_cache
 from shared.database import dispose_engine
 from shared.messaging import close_publisher, get_publisher

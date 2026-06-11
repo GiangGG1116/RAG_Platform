@@ -9,7 +9,6 @@ from __future__ import annotations
 from app.providers.base import BaseLLMProvider
 from app.providers.local_provider import LocalProvider
 from app.providers.openai_provider import OpenAIProvider
-
 from shared.config import get_settings
 
 

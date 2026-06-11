@@ -4,10 +4,10 @@ import logging
 import time
 from typing import Any
 
-from app.graphs.rag_graph import run_rag_pipeline, stream_rag_pipeline
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
+from app.graphs.rag_graph import run_rag_pipeline, stream_rag_pipeline
 from shared.schemas.query import QueryRequest, QueryResponse
 
 logger = logging.getLogger(__name__)

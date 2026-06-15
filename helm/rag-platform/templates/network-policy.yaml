@@ -56,6 +56,8 @@ spec:
         - port: 6379   # redis
         - port: 5672   # rabbitmq
         - port: 15672  # rabbitmq management
+        - port: 6333   # qdrant rest
+        - port: 6334   # qdrant grpc
         - port: {{ .Values.ingestion.port }}    # ingestion
         - port: {{ .Values.retrieval.port }}    # retrieval
         - port: {{ .Values.llmService.port }}   # llm-service

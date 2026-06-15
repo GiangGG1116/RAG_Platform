@@ -2,18 +2,21 @@
 Embedding consumer - processes chunks from RabbitMQ and generates embeddings.
 
 Receives chunk messages, calls the LLM service for embeddings,
-and stores the results in PostgreSQL via pgvector.
+and stores the results in PostgreSQL + Qdrant.
 """
 
 import logging
+import uuid
 from typing import Any
 
 import httpx
+from qdrant_client import models as qdrant_models
 
 from shared.config import get_settings
 from shared.database import get_db_session
 from shared.models.chunk import Chunk
 from shared.models.document import Document, DocumentStatus
+from shared.qdrant import ensure_collection, upsert_vectors
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +50,7 @@ async def handle_embedding_message(message: dict[str, Any]) -> None:
     }
     """
     document_id = message["document_id"]
+    tenant_id = message.get("tenant_id", "default")
     chunk_index = message["chunk_index"]
     content = message["content"]
 
@@ -69,26 +73,59 @@ async def handle_embedding_message(message: dict[str, Any]) -> None:
         embedding_data = response.json()
         embedding = embedding_data["embedding"]
 
-        # Store chunk with embedding in database
+        # Ensure Qdrant collection exists
+        await ensure_collection()
+
+        # Store chunk in PostgreSQL (without embedding)
+        point_id = uuid.uuid4()
         async with get_db_session() as session:
+            # Fetch document title for Qdrant payload
+            doc = await session.get(Document, document_id)
+            doc_title = doc.title if doc else "Unknown"
+            doc_type = doc.doc_type if doc else "text"
+            doc_created_at = doc.created_at.isoformat() if doc and doc.created_at else None
+
             chunk = Chunk(
                 document_id=document_id,
                 content=content,
                 chunk_index=chunk_index,
-                embedding=embedding,
+                qdrant_point_id=point_id,
                 token_count=message.get("token_count", 0),
                 metadata_=message.get("metadata", {}),
             )
             session.add(chunk)
             await session.flush()
 
+            # Upsert vector + full payload into Qdrant
+            await upsert_vectors(
+                [
+                    qdrant_models.PointStruct(
+                        id=str(point_id),
+                        vector=embedding,
+                        payload={
+                            "chunk_id": str(chunk.id),
+                            "document_id": str(document_id),
+                            "document_title": doc_title,
+                            "tenant_id": tenant_id,
+                            "chunk_index": chunk_index,
+                            "content": content,
+                            "token_count": message.get("token_count", 0),
+                            "metadata": message.get("metadata", {}),
+                            "doc_type": doc_type,
+                            "created_at": doc_created_at,
+                        },
+                    )
+                ]
+            )
+
             # Check if all chunks for this document are processed
             await _check_document_completion(session, document_id)
 
         logger.info(
-            "Embedding stored for document %s, chunk %d",
+            "Embedding stored for document %s, chunk %d (qdrant_point=%s)",
             document_id,
             chunk_index,
+            point_id,
         )
 
     except Exception:
@@ -110,10 +147,10 @@ async def _check_document_completion(session: Any, document_id: str) -> None:
     if not doc:
         return
 
-    # Count chunks with embeddings
+    # Count chunks with Qdrant point IDs (i.e. embedding was stored)
     chunk_count_query = select(func.count(Chunk.id)).where(
         Chunk.document_id == document_id,
-        Chunk.embedding.isnot(None),
+        Chunk.qdrant_point_id.isnot(None),
     )
     processed_count = (await session.execute(chunk_count_query)).scalar() or 0
 

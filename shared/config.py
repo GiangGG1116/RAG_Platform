@@ -75,6 +75,17 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-small"
     embedding_dimension: int = 1536
 
+    # ── Qdrant ────────────────────────────────────────────
+    qdrant_host: str = "qdrant"
+    qdrant_port: int = 6333
+    qdrant_grpc_port: int = 6334
+    qdrant_api_key: str = ""
+    qdrant_collection_name: str = "rag_chunks"
+
+    @property
+    def qdrant_url(self) -> str:
+        return f"http://{self.qdrant_host}:{self.qdrant_port}"
+
     # ── Service URLs ─────────────────────────────────────
     api_gateway_host: str = "0.0.0.0"
     api_gateway_run_port: int = 8000

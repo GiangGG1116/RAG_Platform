@@ -35,6 +35,10 @@ config:
   RATE_LIMIT_WINDOW_SECONDS: "60"
   CHUNK_SIZE: "512"
   CHUNK_OVERLAP: "50"
+  QDRANT_HOST: "qdrant"
+  QDRANT_PORT: "6333"
+  QDRANT_GRPC_PORT: "6334"
+  QDRANT_COLLECTION_NAME: "rag_chunks"
   CORS_ORIGINS: "https://rag.company.com,https://admin.company.com,http://localhost:3000,http://127.0.0.1:3000,http://192.168.49.2:30659,http://rag-app.example.com"
   JWT_ALGORITHM: "HS256"
   JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "60"
@@ -236,7 +240,7 @@ worker:
 # PostgreSQL
 # -----------------------------------------------------------------------------
 postgres:
-  image: pgvector/pgvector:pg16
+  image: postgres:16-alpine
   resources:
     requests:
       memory: "512Mi"
@@ -266,6 +270,29 @@ postgres:
       limits:
         memory: "256Mi"
         cpu: "250m"
+
+# -----------------------------------------------------------------------------
+# Qdrant
+# -----------------------------------------------------------------------------
+qdrant:
+  image: qdrant/qdrant:v1.9.7
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+  storage:
+    size: 10Gi
+  restPort: 6333
+  grpcPort: 6334
+  livenessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
 
 # -----------------------------------------------------------------------------
 # RabbitMQ

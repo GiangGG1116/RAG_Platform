@@ -39,11 +39,12 @@ resilience.""",
     {
         "title": "Vector Databases and Similarity Search",
         "content": """Vector databases store and index high-dimensional vectors for efficient similarity search.
-pgvector is a PostgreSQL extension that adds vector similarity search capabilities. It supports
-multiple index types: IVFFlat for approximate nearest neighbor search and HNSW (Hierarchical
-Navigable Small World) for faster queries at higher memory cost. Cosine similarity, L2 distance,
-and inner product are common distance metrics. HNSW indices provide sub-linear query time with
-configurable parameters: m (connections per layer) and ef_construction (build quality).""",
+Qdrant is a high-performance vector database written in Rust that provides fast similarity search
+with filtering capabilities. It supports multiple index types including HNSW (Hierarchical
+Navigable Small World) for sub-linear query time. Cosine similarity, L2 distance,
+and dot product are common distance metrics. Qdrant stores vectors alongside rich payloads,
+enabling filtered search with configurable HNSW parameters: m (connections per layer)
+and ef_construct (build quality). Its gRPC and REST APIs allow seamless integration.""",
         "doc_type": "text",
         "metadata": {"category": "Database", "author": "System"},
     },

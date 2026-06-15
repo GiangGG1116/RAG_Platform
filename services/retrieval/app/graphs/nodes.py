@@ -15,6 +15,7 @@ from sqlalchemy import text
 from shared.cache import get_cache
 from shared.config import get_settings
 from shared.database import get_db_session
+from shared.qdrant import search_vectors
 from shared.utils import build_cache_key
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ def _build_filter_clauses(
 ) -> tuple[str, dict[str, Any]]:
     """Build additional SQL WHERE clauses and params from retrieval filters.
 
+    Used only for the keyword-search fallback path (PostgreSQL ILIKE).
     Returns a tuple of (sql_fragment, params_dict).  The sql_fragment
     contains zero or more ``AND …`` clauses that can be appended directly
     after the base ``WHERE`` clause in the retrieval queries.
@@ -97,7 +99,7 @@ def _build_filter_clauses(
 
 
 async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Hybrid retrieval: vector similarity + keyword search with optional filters."""
+    """Hybrid retrieval: Qdrant vector search + PostgreSQL keyword fallback."""
     question = state["question"]
     tenant_id = state["tenant_id"]
     top_k = state["top_k"]
@@ -115,11 +117,6 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
     settings = get_settings()
     retrieved_chunks: list[dict] = []
 
-    # Build advanced filter SQL clauses
-    filter_sql, filter_params = _build_filter_clauses(filters)
-    if filter_sql:
-        logger.info("Applying retrieval filters: %s", list(filter_params.keys()))
-
     # Get query embedding from LLM service
     http_client = state["http_client"]
     try:
@@ -133,60 +130,51 @@ async def retrieve_node(state: dict[str, Any]) -> dict[str, Any]:
         logger.warning("Failed to get query embedding, falling back to keyword search")
         query_embedding = None
 
-    async with get_db_session() as session:
-        if query_embedding:
-            # Vector similarity search using pgvector
-            embedding_str = f"[{','.join(str(x) for x in query_embedding)}]"
-            vector_query = text(f"""
+    if query_embedding:
+        # ── Vector search via Qdrant (single hop) ────────────────
+        results = await search_vectors(
+            query_vector=query_embedding,
+            tenant_id=tenant_id,
+            limit=top_k,
+            filters=filters,
+        )
+        for point in results:
+            payload = point.payload or {}
+            retrieved_chunks.append(
+                {
+                    "chunk_id": payload.get("chunk_id", ""),
+                    "document_id": payload.get("document_id", ""),
+                    "document_title": payload.get("document_title", ""),
+                    "content": payload.get("content", ""),
+                    "score": float(point.score),
+                    "metadata": payload.get("metadata", {}),
+                }
+            )
+    else:
+        # ── Fallback: keyword search via PostgreSQL ILIKE ────────
+        filter_sql, filter_params = _build_filter_clauses(filters)
+        if filter_sql:
+            logger.info("Applying retrieval filters: %s", list(filter_params.keys()))
+
+        keywords = state.get("query_analysis", {}).get("keywords", [])
+        if keywords:
+            safe_keywords = keywords[:5]
+            keyword_conditions = " OR ".join([f"c.content ILIKE :kw_{i}" for i in range(len(safe_keywords))])
+            keyword_query = text(f"""
                 SELECT c.id, c.document_id, c.content, c.chunk_index, c.metadata,
                        d.title as document_title,
-                       1 - (c.embedding <=> CAST(:embedding AS vector)) as similarity_score
+                       0.5 as similarity_score
                 FROM chunks c
                 JOIN documents d ON d.id = c.document_id
                 WHERE d.tenant_id = :tenant_id
-                  AND c.embedding IS NOT NULL
+                  AND ({keyword_conditions})
                   {filter_sql}
-                ORDER BY c.embedding <=> CAST(:embedding AS vector)
                 LIMIT :top_k
             """)  # noqa: S608
-            params = {
-                "embedding": embedding_str,
-                "tenant_id": tenant_id,
-                "top_k": top_k,
-                **filter_params,
-            }
-            result = await session.execute(vector_query, params)
-            for row in result.mappings():
-                retrieved_chunks.append(
-                    {
-                        "chunk_id": str(row["id"]),
-                        "document_id": str(row["document_id"]),
-                        "document_title": row["document_title"],
-                        "content": row["content"],
-                        "score": float(row["similarity_score"]),
-                        "metadata": row["metadata"] or {},
-                    }
-                )
-        else:
-            # Fallback: keyword search with ILIKE (parameterized to prevent SQL injection)
-            keywords = state.get("query_analysis", {}).get("keywords", [])
-            if keywords:
-                safe_keywords = keywords[:5]
-                keyword_conditions = " OR ".join([f"c.content ILIKE :kw_{i}" for i in range(len(safe_keywords))])
-                keyword_query = text(f"""
-                    SELECT c.id, c.document_id, c.content, c.chunk_index, c.metadata,
-                           d.title as document_title,
-                           0.5 as similarity_score
-                    FROM chunks c
-                    JOIN documents d ON d.id = c.document_id
-                    WHERE d.tenant_id = :tenant_id
-                      AND ({keyword_conditions})
-                      {filter_sql}
-                    LIMIT :top_k
-                """)  # noqa: S608
-                params = {"tenant_id": tenant_id, "top_k": top_k, **filter_params}
-                for i, kw in enumerate(safe_keywords):
-                    params[f"kw_{i}"] = f"%{kw}%"
+            params = {"tenant_id": tenant_id, "top_k": top_k, **filter_params}
+            for i, kw in enumerate(safe_keywords):
+                params[f"kw_{i}"] = f"%{kw}%"
+            async with get_db_session() as session:
                 result = await session.execute(keyword_query, params)
                 for row in result.mappings():
                     retrieved_chunks.append(

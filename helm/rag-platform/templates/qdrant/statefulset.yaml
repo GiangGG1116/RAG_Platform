@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qdrant
+  namespace: {{ include "rag-platform.namespace" . }}
+  labels:
+    {{- include "rag-platform.labels" . | nindent 4 }}
+    app: qdrant
+spec:
+  serviceName: qdrant
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qdrant
+  template:
+    metadata:
+      labels:
+        {{- include "rag-platform.labels" . | nindent 8 }}
+        app: qdrant
+    spec:
+      containers:
+        - name: qdrant
+          image: {{ .Values.qdrant.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: rest
+              containerPort: {{ .Values.qdrant.restPort }}
+              protocol: TCP
+            - name: grpc
+              containerPort: {{ .Values.qdrant.grpcPort }}
+              protocol: TCP
+          env:
+            - name: QDRANT__SERVICE__GRPC_PORT
+              value: {{ .Values.qdrant.grpcPort | quote }}
+          volumeMounts:
+            - name: qdrant-data
+              mountPath: /qdrant/storage
+          livenessProbe:
+            httpGet:
+              path: /readyz
+              port: rest
+            initialDelaySeconds: {{ .Values.qdrant.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.qdrant.livenessProbe.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: rest
+            initialDelaySeconds: {{ .Values.qdrant.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.qdrant.readinessProbe.periodSeconds }}
+          resources:
+            {{- toYaml .Values.qdrant.resources | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: qdrant-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.qdrant.storage.size }}
